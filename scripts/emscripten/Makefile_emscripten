@@ -1,0 +1,67 @@
+# Emscripten Makefile to generate a webpage
+# Usage:
+# $ emmake make -f scripts/emscripten/Makefile_emscripten
+# $ emrun index.html
+
+# ====== Basic Configuration ======
+TARGET      ?= project.html
+BUILD_DIR   ?= build_emscripten
+SRC_DIRS    ?= src cgp
+CXX         := emcc
+CXXSTD      ?= c++17
+
+# Header include directories
+INC_DIRS    := . src cgp
+
+# Preprocessor definitions (-D)
+DEFINES     := SOLUTION                        # Enable solution code
+DEFINES     += IMGUI_IMPL_OPENGL_LOADER_GLAD   # ImGui uses GLAD for OpenGL function loading
+DEFINES     += CGP_NO_DEBUG                    # Disable CGP assertions
+
+# ====== Sources / Objects / Dependencies ======
+# Find .cpp and .c files
+SRCS := $(shell find $(SRC_DIRS) -type f \( -name '*.cpp' -o -name '*.c' \))
+# Put object files under build/ while keeping folder structure
+OBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(patsubst %.c,$(BUILD_DIR)/%.o,$(SRCS)))
+DEPS := $(OBJS:.o=.d)
+
+# ====== Compiler/Linker Flags ======
+CPPFLAGS += $(addprefix -I,$(INC_DIRS)) \
+            $(addprefix -D,$(DEFINES)) -MMD -MP
+CXXFLAGS += -std=$(CXXSTD) -O2 -Wall -Wextra -Wfatal-errors \
+            -Wno-sign-compare -Wno-type-limits -Wno-pragmas
+LDFLAGS  +=
+LDLIBS   += -ldl -lm -sMAX_WEBGL_VERSION=2 -sUSE_GLFW=3 -sALLOW_MEMORY_GROWTH=1 \
+            --preload-file shaders/ --preload-file assets/
+
+# ====== Rules ======
+.PHONY: all clean run
+.DEFAULT_GOAL := all
+.DELETE_ON_ERROR:
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	@echo "Link  $@"
+	$(CXX) $(LDFLAGS) $(OBJS) -o $@ $(LDLIBS)
+	cp scripts/emscripten/emscripten_template.html index.html
+
+# Compile C++ sources
+$(BUILD_DIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	@echo "C++   $<"
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
+# Compile C sources
+$(BUILD_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	@echo "C     $<"
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+run: $(TARGET)
+	emrun index.html
+
+clean:
+	$(RM) -r $(BUILD_DIR) $(TARGET) index.html project.js project.wasm project.data $(DEPS)
+
+-include $(DEPS)

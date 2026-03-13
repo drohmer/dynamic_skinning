@@ -1,0 +1,43 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    // Use CMakePresets.json
+    "cmake.useCMakePresets": "always",
+
+    // Default configure + build preset
+    "cmake.configureOnOpen": true,
+    "cmake.configurePreset": "debug",
+    "cmake.buildPreset": "debug",
+
+    // Let cpptools/clangd know about compile_commands.json
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+
+    // CodeLLDB integration (if you installed vadimcn.vscode-lldb)
+    "lldb.launch.expressions": "native"
+  },
+  "launch": {
+    "version": "1.0.0",
+    "configurations": [
+      {
+        "name": "Debug (CodeLLDB + CMake target)",
+        "type": "lldb",
+        "request": "launch",
+        "program": "${command:cmake.launchTargetPath}",
+        "args": [],
+        "cwd": "${workspaceFolder}",
+        "stopOnEntry": false
+      }
+    ]
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-vscode.cmake-tools",
+      "ms-vscode.cpptools",
+      "vadimcn.vscode-lldb"
+    ]
+  }
+}
