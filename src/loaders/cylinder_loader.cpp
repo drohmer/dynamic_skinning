@@ -68,58 +68,61 @@ character_structure load_cylinder_bending()
     for (int k = 0; k < N_joints; ++k)
         anim.joint_index[k] = k;
 
-    // Keyframe times: 7 frames (0 to 6 seconds)
-    int N_frames = 7;
-    float t_max = 6.0f;
+    // Animation timing: each pose holds for `hold` seconds, transitions take `move` seconds.
+    //   straight (hold) → bend up (hold) → straight (hold) → bend down (hold) → ...
+    float const hold = 2.0f;   // static hold duration at each pose
+    float const move = 0.5f;   // transition duration between poses
 
-    // Joint 0: identity at all times
+    mat4 M_straight = mat4::build_translation(0.5f, 0.0f, 0.0f);
+    mat4 M_bend_up, M_bend_down;
+    {
+        M_bend_up = mat4::build_rotation_from_axis_angle({0, 0, 1}, 3.14159f / 2.0f);
+        M_bend_up.apply_translation({0.5f, 0.0f, 0.0f});
+        M_bend_down = mat4::build_rotation_from_axis_angle({0, 0, 1}, -3.14159f / 2.0f);
+        M_bend_down.apply_translation({0.5f, 0.0f, 0.0f});
+    }
+
+    // Sequence of poses for joint 1
+    struct pose { mat4 matrix; };
+    pose poses[] = { {M_straight}, {M_bend_up}, {M_straight}, {M_bend_down}, {M_straight} };
+    int N_poses = 5;
+
+    // Build keyframes: for each pose, two keyframes (start and end of hold),
+    // with a transition of `move` seconds between consecutive poses.
+    // Total per pose pair: hold + move.  Last pose only has hold.
+    int N_frames = N_poses * 2;
+    float t = 0.0f;
+
+    numarray<float> times_joint1;
+    numarray<mat4>  matrices_joint1;
+    for (int p = 0; p < N_poses; ++p) {
+        times_joint1.push_back(t);
+        matrices_joint1.push_back(poses[p].matrix);
+        t += hold;
+        times_joint1.push_back(t);
+        matrices_joint1.push_back(poses[p].matrix);
+        if (p < N_poses - 1) t += move;
+    }
+    float t_max = t;
+    N_frames = times_joint1.size();
+
+    // Joint 0: root, identity at all keyframe times
     anim.times[0].resize(N_frames);
     anim.matrix[0].resize(N_frames);
     for (int k = 0; k < N_frames; ++k) {
-        anim.times[0][k] = static_cast<float>(k);
+        anim.times[0][k] = times_joint1[k];
         anim.matrix[0][k] = mat4::build_identity();
     }
 
-    // Joint 1: bending and twisting animation
-    // Frame 0: straight
-    // Frame 1: bend pi/2 around z
-    // Frame 2: straight
-    // Frame 3: bend pi/2 around x
-    // Frame 4: straight
-    // Frame 5: bend -pi/2 around x
-    // Frame 6: straight
-    anim.times[1].resize(N_frames);
-    anim.matrix[1].resize(N_frames);
-    for (int k = 0; k < N_frames; ++k)
-        anim.times[1][k] = static_cast<float>(k);
+    // Joint 1: bending up/down
+    anim.times[1] = times_joint1;
+    anim.matrix[1] = matrices_joint1;
 
-    mat4 M_local_joint1 = mat4::build_translation(0.5f, 0.0f, 0.0f);
-
-    anim.matrix[1][0] = M_local_joint1; // straight
-    {
-        mat4 M = mat4::build_rotation_from_axis_angle({0, 0, 1}, 3.14159f / 2.0f);
-        M.apply_translation({0.5f, 0.0f, 0.0f});
-        anim.matrix[1][1] = M; // bend z
-    }
-    anim.matrix[1][2] = M_local_joint1; // straight
-    {
-        mat4 M = mat4::build_rotation_from_axis_angle({1, 0, 0}, 3.14159f / 2.0f);
-        M.apply_translation({0.5f, 0.0f, 0.0f});
-        anim.matrix[1][3] = M; // bend x
-    }
-    anim.matrix[1][4] = M_local_joint1; // straight
-    {
-        mat4 M = mat4::build_rotation_from_axis_angle({1, 0, 0}, -3.14159f / 2.0f);
-        M.apply_translation({0.5f, 0.0f, 0.0f});
-        anim.matrix[1][5] = M; // bend -x
-    }
-    anim.matrix[1][6] = M_local_joint1; // straight
-
-    // Joint 2: always identity relative to parent (just for display)
+    // Joint 2: fixed relative to parent
     anim.times[2].resize(N_frames);
     anim.matrix[2].resize(N_frames);
     for (int k = 0; k < N_frames; ++k) {
-        anim.times[2][k] = static_cast<float>(k);
+        anim.times[2][k] = times_joint1[k];
         anim.matrix[2][k] = mat4::build_translation(0.5f, 0.0f, 0.0f);
     }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include "cgp/cgp.hpp"
 #include "angular_velocity_tracker.hpp"
 #include "animated_character/animated_model/animated_model.hpp"
@@ -10,8 +11,8 @@
 // Parameters controlling the dynamic skinning effect
 struct dynamic_skinning_parameters {
     float frequency       = 2.0f * 3.14159f * 1.5f;
-    float amplitude       = 0.1f;
-    float attenuation     = 1.0f;
+    float amplitude       = 0.3f;
+    float attenuation     = 1.5f;
     float frequency_slope = 0.0f;
 
     float bend_max_angle = 3.14159f;
@@ -38,6 +39,11 @@ struct dynamic_skinning_state {
 
     // Per-vertex bend weight (default 1.0)
     cgp::numarray<float> weight_bend;
+
+    // Timing of last frame (in ms)
+    float timing_phase1_ms = 0.0f;   // filtered angular velocity
+    float timing_phase2_ms = 0.0f;   // gather deformation
+    float timing_normals_ms = 0.0f;  // normal recomputation
 };
 
 

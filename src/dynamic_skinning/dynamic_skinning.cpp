@@ -1,5 +1,6 @@
 #include "dynamic_skinning.hpp"
 #include <map>
+#include <chrono>
 
 using namespace cgp;
 
@@ -34,30 +35,33 @@ static float kernel_derivative(int k, dynamic_skinning_parameters const& params)
 
 
 // Bend deformer ψ^bend (eq. 9, Algorithm 2 lines 7-10)
-//   Paper:  ψ^bend(Ω, q, p) = R_κ(Ω, p-q) · (p - q)
-//   where R_κ is a rotation with:
-//     - axis  = Ω / ‖Ω‖
-//     - angle = -γ^bend · ‖Ω × (p - q)‖
-//   The deformation offset added to the vertex position is (R - I)·(p - q),
-//   since R preserves the component along the axis, (R-I) zeroes it.
+//   Paper:  ψ^bend(Ω, q, p) = (R_κ - I) · (p - c)
+//   where c = projection of p onto the rotation axis through q_j,
+//   and R_κ is a rotation with axis ω = Ω/‖Ω‖ and angle θ = -γ^bend · ‖Ω × (p-q)‖.
+//
+//   Using Rodrigues' formula directly for (R-I)·v avoids building the 3×3 matrix:
+//     (R-I)·v = sin(θ) (ω × v) + (1 - cos(θ)) (ω × (ω × v))
 static vec3 bend_deformer(float gamma_bend,
                            vec3 const& p_vertex,
                            vec3 const& p_joint,
                            vec3 const& omega_dir,
-                           float cross_omega_u_norm,
-                           float /*bend_max_angle*/)
+                           float cross_omega_u_norm)
 {
     vec3 const u = p_vertex - p_joint;
-    mat3 const Id = mat3::build_identity();
 
-    // Rotation center = projection of p onto the rotation axis through q_j
-    vec3 const rotation_center = p_joint + dot(u, omega_dir) * omega_dir;
-    float rotation_angle = cross_omega_u_norm * gamma_bend;    // -γ^bend ‖Ω × u‖
+    // v = p - c, where c = q_j + (u · ω)ω  (projection onto rotation axis)
+    // So v = u - (u · ω)ω = component of u perpendicular to ω
+    float u_dot_w = dot(u, omega_dir);
+    vec3 const v = u - u_dot_w * omega_dir;
 
-    mat3 const R = rotation_transform::from_axis_angle(omega_dir, -rotation_angle).matrix();
-    vec3 const deformation = (R - Id) * (p_vertex - rotation_center);  // = (R-I)·u
+    float theta = -gamma_bend * cross_omega_u_norm;
+    float sin_t = std::sin(theta);
+    float cos_t_m1 = std::cos(theta) - 1.0f;   // = -(1 - cos(θ))
 
-    return deformation;
+    // (R-I)·v via Rodrigues:  sin(θ)(ω×v) + (1-cos(θ))(ω×(ω×v))
+    // Since v ⊥ ω:  ω×(ω×v) = -v,  so:  (R-I)·v = sin(θ)(ω×v) - (1-cos(θ))v
+    vec3 const w_cross_v = cross(omega_dir, v);
+    return sin_t * w_cross_v + cos_t_m1 * v;
 }
 
 
@@ -153,6 +157,9 @@ void dynamic_skinning_apply(dynamic_skinning_state& state,
     state.deformation_per_vertex.fill({0, 0, 0});
     state.filtered_angular_velocity.fill({0, 0, 0});
 
+    using clock = std::chrono::high_resolution_clock;
+    auto t0 = clock::now();
+
     // ---- Phase 1: filtered angular velocity per joint (Algorithm 2, lines 14-22) ----
     //
     // For each joint j, compute the filtered angular velocity F^osc(Ω_j, t)
@@ -207,35 +214,60 @@ void dynamic_skinning_apply(dynamic_skinning_state& state,
         state.filtered_angular_velocity[joint] = angular_velocity;
     }
 
+    auto t1 = clock::now();
+
     // ---- Phase 2: gather deformation per vertex (eq. 8, Algorithm 2, lines 24-34) ----
     //
     //   d_i = Σ_j β_ij · ψ^bend(γ_i^bend, p_i, q_j, F^osc(Ω_j))      (eq. 8)
     //
     // where β_ij are hierarchical weights (eq. 6) and ψ^bend is the
     // bend deformer (eq. 9).
+
+    // Precompute per-joint data: position, direction, norm (avoids redundant
+    // work when many vertices share the same joint).
+    // Also build a mask of active joints (‖Ω‖ > threshold) for early-out.
+    struct joint_precomp { vec3 position; vec3 omega_dir; float omega_norm; };
+    numarray<joint_precomp> joint_data(N_joint);
+    numarray<int> joint_active(N_joint);
+    for (int j = 0; j < N_joint; ++j) {
+        vec3 const& omega = state.filtered_angular_velocity[j];
+        float on = norm(omega);
+        joint_active[j] = (on >= 1e-2f);
+        if (joint_active[j]) {
+            joint_data[j].position   = model.skeleton.joint_matrix_global[j].get_block_translation();
+            joint_data[j].omega_dir  = omega / on;
+            joint_data[j].omega_norm = on;
+        }
+    }
+
+    float const bend_base = default_bend_factor * params.bend_magnitude;
+
     for (int i = 0; i < N_vertex; ++i) {
         auto const& joints = state.joints_per_vertex[i];
         auto const& weights = state.hierarchical_weights[i];
         vec3 const& p_vertex = mesh_deformed.position[i];
-        float w_bend = default_bend_factor * params.bend_magnitude * state.weight_bend[i];
+        float w_bend = bend_base * state.weight_bend[i];
 
         for (int k = 0; k < static_cast<int>(joints.size()); ++k) {
             int j = joints[k];
-            float beta_ij = weights[k];                                    // eq. 6
-            vec3 const& omega = state.filtered_angular_velocity[j];        // F^osc(Ω_j)
-            float omega_norm = norm(omega);
-            if (omega_norm < 1e-2f) continue;
+            if (!joint_active[j]) continue;
 
-            vec3 p_joint = model.skeleton.joint_matrix_global[j].get_block_translation();
-            vec3 omega_dir = omega / omega_norm;
-            vec3 vertex_velocity = cross(omega, p_vertex - p_joint);       // Ω × u
+            float beta_ij = weights[k];                                    // eq. 6
+            vec3 const& omega_dir = joint_data[j].omega_dir;
+            vec3 const& p_joint   = joint_data[j].position;
+            float omega_norm      = joint_data[j].omega_norm;
+
+            // ‖Ω × u‖ = ‖Ω‖ · ‖ω × u‖  where ω = Ω/‖Ω‖
+            vec3 u = p_vertex - p_joint;
+            float cross_norm = omega_norm * norm(cross(omega_dir, u));     // ‖Ω × u‖
 
             vec3 bend = bend_deformer(w_bend, p_vertex, p_joint,           // ψ^bend (eq. 9)
-                                       omega_dir, norm(vertex_velocity),
-                                       params.bend_max_angle);
+                                       omega_dir, cross_norm);
             state.deformation_per_vertex[i] += beta_ij * bend;             // eq. 8
         }
     }
+
+    auto t2 = clock::now();
 
     // Apply accumulated deformations: p_i' = p_i + d_i  (eq. 5)
     for (int k = 0; k < N_vertex; ++k) {
@@ -244,6 +276,14 @@ void dynamic_skinning_apply(dynamic_skinning_state& state,
 
     // Recompute normals after deformation
     mesh_deformed.normal = normal_per_vertex(mesh_deformed.position, mesh_deformed.connectivity);
+
+    auto t3 = clock::now();
+
+    // Store timings
+    auto to_ms = [](auto d) { return std::chrono::duration<float, std::milli>(d).count(); };
+    state.timing_phase1_ms  = to_ms(t1 - t0);
+    state.timing_phase2_ms  = to_ms(t2 - t1);
+    state.timing_normals_ms = to_ms(t3 - t2);
 }
 
 

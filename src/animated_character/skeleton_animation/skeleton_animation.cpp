@@ -18,9 +18,20 @@ mat4 skeleton_animation_structure::evaluate(int k_joint, float t) const {
     if(idx0<N_time-1){
         mat4 const& M0 = matrix[k_joint][idx0];
         mat4 const& M1 = matrix[k_joint][idx0+1];
-        M = (1.0f-alpha)*M0 + alpha*M1;
+
+        // Interpolate translation with lerp
+        vec3 t0 = M0.get_block_translation();
+        vec3 t1 = M1.get_block_translation();
+        vec3 t_interp = (1.0f - alpha) * t0 + alpha * t1;
+
+        // Interpolate rotation with nlerp (lerp + normalize, preserves orthogonality)
+        rotation_transform R0 = rotation_transform::from_matrix(M0.get_block_linear());
+        rotation_transform R1 = rotation_transform::from_matrix(M1.get_block_linear());
+        rotation_transform R_interp = rotation_transform::lerp(R0, R1, alpha);
+
+        M = mat4::build_affine(R_interp.matrix(), t_interp);
     }
-    if(idx0>=N_time-1) {
+    else {
         M = matrix[k_joint][N_time-1];
     }
 

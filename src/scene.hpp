@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 
 #include "cgp/cgp.hpp"
 #include "environment.hpp"
@@ -13,6 +14,27 @@
 
 
 using cgp::mesh_drawable;
+
+
+// Running average over a fixed window for timing measurements
+struct timing_average {
+	static constexpr int N = 60;
+	float samples[N] = {};
+	int index = 0;
+	int count = 0;
+
+	void push(float ms) {
+		samples[index] = ms;
+		index = (index + 1) % N;
+		if (count < N) ++count;
+	}
+	float average() const {
+		if (count == 0) return 0.0f;
+		float sum = 0.0f;
+		for (int i = 0; i < count; ++i) sum += samples[i];
+		return sum / count;
+	}
+};
 
 
 struct gui_parameters {
@@ -56,6 +78,16 @@ struct scene_structure : cgp::scene_inputs_generic {
 	mesh_drawable sphere_picking;
 
 	cgp::timer_basic ds_timer;
+
+	// ****************************** //
+	// Timing
+	// ****************************** //
+	timing_average timing_animation;
+	timing_average timing_lbs;
+	timing_average timing_ds_phase1;
+	timing_average timing_ds_phase2;
+	timing_average timing_ds_normals;
+	bool display_timings = false;
 
 	// ****************************** //
 	// Functions
