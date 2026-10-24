@@ -5,3 +5,11 @@ imgui.ini
 .vs/
 *.o
 **/.DS_Store
+# Build outputs
+build_emscripten/
+/project
+/project.html
+/project.js
+/project.wasm
+/project.data
+/index.html

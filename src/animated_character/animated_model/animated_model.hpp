@@ -6,10 +6,17 @@
 #include "../skeleton_structure/skeleton_structure.hpp"
 #include "../skeleton_animation/skeleton_animation.hpp"
 
+#include <set>
+
 struct rigged_mesh_structure {
     cgp::mesh mesh_bind_pose;  // Bind pose (/un-deformed) mesh
     cgp::mesh mesh_deformed;   // Deformed mesh
     controller_skinning_structure controller_skinning;   // skinning weights dependence
+
+    // Per-vertex bend weight γ^bend (Section 6.1 — weight painting).
+    // Modulates the intensity of bend deformation per vertex.
+    // Empty means uniform weight of 1.0 for all vertices.
+    cgp::numarray<float> weight_bend;
 };
 
 struct animated_model_structure {
@@ -17,6 +24,9 @@ struct animated_model_structure {
     skeleton_structure skeleton; // A skeleton that stores its structure/hierarchy, and the local and global joint frames
     std::map<std::string, rigged_mesh_structure> rigged_mesh; // an animated model may be linked to multiple rigged meshes
     std::map<std::string, skeleton_animation_structure> animation; // storage for all the possible animation of this skeleton
+
+    // Joints to exclude from dynamic skinning hierarchical weights (e.g. FBones)
+    std::set<int> excluded_ds_joints;
 
     // Compute the joint position corresponding to the given animation_name at time t from the animation structure. Then update the skeleton structure in filling the local joint matrix. Finally update the global matrices of the skeleton.
     //  - t can be an arbitrary float values, the animation matrix are interpolated between the frames

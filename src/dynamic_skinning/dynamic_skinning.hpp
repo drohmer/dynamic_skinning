@@ -55,7 +55,7 @@ void dynamic_skinning_initialize(dynamic_skinning_state& state,
 // Apply dynamic skinning deformations for the current frame (call AFTER skinning_lbs).
 void dynamic_skinning_apply(dynamic_skinning_state& state,
                             dynamic_skinning_parameters const& params,
-                            animated_model_structure const& model,
+                            animated_model_structure& model,
                             std::string const& mesh_name,
                             float current_time);
 

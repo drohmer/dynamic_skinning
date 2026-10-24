@@ -46,6 +46,9 @@ void joint_picking_mouse_click(joint_picking_state& picking,
             picking.selected_joint = joint_selected;
             picking.p_clicked = picked_position;
             picking.p_current = picked_position;
+            picking.p_previous = picked_position;
+            picking.accumulated_rotation = {0, 0, 0, 1};  // identity
+            picking.accumulated_twist_angle = 0.0f;
             picking.selected_joint_true = picking.selected_joint;
 
             // For rotation mode: the actual deformed joint is the parent
@@ -121,37 +124,58 @@ void joint_picking_mouse_move(joint_picking_state& picking,
                 q_grand_parent = rotation_transform::from_matrix(R_gp).get_quaternion();
             }
 
-            quaternion q = {0,0,0,1};
             if (picking.click_button == picking_click_button::left) {
-                vec3 const u_ref = normalize(picking.p_clicked - p_parent);
-                vec3 const u_objective = normalize(picking.p_current - p_parent);
+                // Incremental rotation: small delta from p_previous to p_current
+                vec3 const u_prev = picking.p_previous - p_parent;
+                vec3 const u_curr = picking.p_current - p_parent;
+                float n_prev = norm(u_prev);
+                float n_curr = norm(u_curr);
 
-                float d = dot(u_ref, u_objective);
-                d = std::max(-1.0f, std::min(1.0f, d));
-                float const angle = std::acos(d);
-                vec3 axis = cross(u_ref, u_objective);
-                float axis_norm = norm(axis);
-                if (axis_norm > 1e-6f) {
-                    axis = axis / axis_norm;
-                    q = rotation_transform::from_axis_angle(axis, angle).get_quaternion();
+                if (n_prev > 1e-6f && n_curr > 1e-6f) {
+                    vec3 const d_prev = u_prev / n_prev;
+                    vec3 const d_curr = u_curr / n_curr;
+
+                    float d = dot(d_prev, d_curr);
+                    d = std::max(-1.0f, std::min(1.0f, d));
+                    float const angle = std::acos(d);
+
+                    if (angle > 1e-6f) {
+                        vec3 axis = cross(d_prev, d_curr);
+                        float axis_norm = norm(axis);
+                        if (axis_norm > 1e-6f) {
+                            axis = axis / axis_norm;
+                            quaternion delta_q = rotation_transform::from_axis_angle(axis, angle).get_quaternion();
+                            picking.accumulated_rotation = delta_q * picking.accumulated_rotation;
+                        }
+                    }
                 }
             }
             else if (picking.click_button == picking_click_button::right) {
-                vec3 const axis = normalize(picking.p_clicked - p_parent);
+                // Incremental twist: delta angle between p_previous and p_current in screen space
+                vec3 const bone_axis = normalize(picking.p_clicked - p_parent);
 
-                // Project to screen for twist computation
                 vec2 const p0_screen = project_to_screen(p_parent, view_matrix, projection);
                 vec2 const p1_screen = project_to_screen(picking.p_clicked, view_matrix, projection);
-                vec2 const p_screen = project_to_screen(picking.p_current, view_matrix, projection);
+                vec2 const p_prev_screen = project_to_screen(picking.p_previous, view_matrix, projection);
+                vec2 const p_curr_screen = project_to_screen(picking.p_current, view_matrix, projection);
 
                 vec2 const a = normalize(p1_screen - p0_screen);
-                vec2 const b = p_screen - p0_screen;
-                float const angle = -2.0f * 3.14159f * (a.x * b.y - a.y * b.x);
-                q = rotation_transform::from_axis_angle(axis, angle).get_quaternion();
+                vec2 const b_prev = p_prev_screen - p0_screen;
+                vec2 const b_curr = p_curr_screen - p0_screen;
+
+                float angle_prev = a.x * b_prev.y - a.y * b_prev.x;
+                float angle_curr = a.x * b_curr.y - a.y * b_curr.x;
+                float delta_angle = -2.0f * 3.14159f * (angle_curr - angle_prev);
+
+                picking.accumulated_twist_angle += delta_angle;
+                picking.accumulated_rotation = rotation_transform::from_axis_angle(bone_axis, picking.accumulated_twist_angle).get_quaternion();
             }
 
-            mat3 R_rot = rotation_transform(conjugate(q_grand_parent) * q * q_grand_parent).matrix();
+            // Apply accumulated rotation in grand-parent frame
+            mat3 R_rot = rotation_transform(conjugate(q_grand_parent) * picking.accumulated_rotation * q_grand_parent).matrix();
             interactive_deformation[parent].set_block_linear(R_rot);
+
+            picking.p_previous = picking.p_current;
         }
     }
 }
@@ -160,7 +184,8 @@ void joint_picking_mouse_move(joint_picking_state& picking,
 void joint_picking_apply_deformation(joint_picking_state const& picking,
                                      skeleton_structure const& skeleton,
                                      numarray<mat4>& interactive_deformation,
-                                     std::map<std::string, skeleton_animation_structure>& animations)
+                                     std::map<std::string, skeleton_animation_structure>& animations,
+                                     numarray<mat4>& skeleton_local_rest)
 {
     int parent = skeleton.parent_index[picking.selected_joint];
 
@@ -168,6 +193,13 @@ void joint_picking_apply_deformation(joint_picking_state const& picking,
     mat3 rotation_mat = mat3::build_identity();
     if (parent > -1) {
         rotation_mat = interactive_deformation[parent].get_block_linear();
+    }
+
+    // Apply to the rest local matrices (overwritten by the animation for animated joints)
+    skeleton_local_rest[picking.selected_joint].apply_translation(translation);
+    if (parent > -1) {
+        mat3 current_linear = skeleton_local_rest[parent].get_block_linear();
+        skeleton_local_rest[parent].set_block_linear(rotation_mat * current_linear);
     }
 
     // Apply to all animation keyframes

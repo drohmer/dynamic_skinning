@@ -41,8 +41,17 @@ inline void angular_velocity_tracker::add(cgp::quaternion const& new_rotation, f
     if (std::abs(time - last_time) < 1e-4f)
         return;
 
+    // Ensure quaternion hemisphere consistency: q and -q represent the same
+    // rotation, but a sign flip between frames causes the tracker to see a
+    // ~2π delta instead of a small one.  Always pick the shortest path.
+    cgp::quaternion nr = new_rotation;
+    float qd = nr.x * last_rotation.x + nr.y * last_rotation.y
+             + nr.z * last_rotation.z + nr.w * last_rotation.w;
+    if (qd < 0.0f)
+        nr = {-nr.x, -nr.y, -nr.z, -nr.w};
+
     if (counter_initialization >= 1) {
-        cgp::quaternion const q = new_rotation * cgp::conjugate(last_rotation);
+        cgp::quaternion const q = nr * cgp::conjugate(last_rotation);
 
         // Extract axis-angle from quaternion
         cgp::vec3 n_sin = cgp::vec3(q.x, q.y, q.z);
@@ -65,10 +74,10 @@ inline void angular_velocity_tracker::add(cgp::quaternion const& new_rotation, f
         cgp::vec3 new_angular_velocity = axis * angle / (time - last_time);
 
         // Clamp to reject spurious spikes (e.g. from mouse interaction jitter)
-        float const max_angular_velocity = 50.0f; // rad/s
+        static constexpr float MAX_ANGULAR_VELOCITY = 50.0f; // rad/s
         float const nv = cgp::norm(new_angular_velocity);
-        if (nv > max_angular_velocity)
-            new_angular_velocity = new_angular_velocity * (max_angular_velocity / nv);
+        if (nv > MAX_ANGULAR_VELOCITY)
+            new_angular_velocity = new_angular_velocity * (MAX_ANGULAR_VELOCITY / nv);
 
         avg_angular_velocity = alpha_smoothing * avg_angular_velocity + (1.0f - alpha_smoothing) * new_angular_velocity;
     }
@@ -76,7 +85,7 @@ inline void angular_velocity_tracker::add(cgp::quaternion const& new_rotation, f
     if (counter_initialization == 1) counter_initialization = 2;
     if (counter_initialization == 0) counter_initialization = 1;
 
-    last_rotation = new_rotation;
+    last_rotation = nr;
     last_time = time;
 
     angular_velocity_history.push_back(avg_angular_velocity);

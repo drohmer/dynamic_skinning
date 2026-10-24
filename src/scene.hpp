@@ -9,8 +9,10 @@
 
 #include "dynamic_skinning/dynamic_skinning.hpp"
 #include "interaction/joint_picking.hpp"
+#include "gpu_skinning/gpu_skinning.hpp"
 #include "loaders/cylinder_loader.hpp"
 #include "loaders/legacy_loader.hpp"
+#include "loaders/cthulhu_loader.hpp"
 
 
 using cgp::mesh_drawable;
@@ -36,6 +38,8 @@ struct timing_average {
 	}
 };
 
+
+enum class weight_display_mode { none, skinning, hierarchical };
 
 struct gui_parameters {
 	bool display_wireframe = false;
@@ -68,6 +72,11 @@ struct scene_structure : cgp::scene_inputs_generic {
 	character_structure character;
 	std::string current_model_name = "Cylinder";
 
+	// Cthulhu-specific options
+	int cthulhu_resolution_index = 0;  // index into cthulhu_resolutions[]
+	bool cthulhu_use_bend_weights = false;
+	bool display_bend_weights = false;
+
 	// ****************************** //
 	// Dynamic Skinning & Joint Picking
 	// ****************************** //
@@ -75,9 +84,23 @@ struct scene_structure : cgp::scene_inputs_generic {
 	dynamic_skinning_state ds_state;
 	joint_picking_state picking;
 	cgp::numarray<cgp::mat4> interactive_deformation;
+	cgp::numarray<cgp::mat4> skeleton_local_rest;  // local matrices restored each frame before animation
 	mesh_drawable sphere_picking;
+	bool camera_mode = false;  // false = bone-edit mode, true = camera mode
+	weight_display_mode weight_display = weight_display_mode::none;
+
+	// Cache for weight color visualization (avoid recomputing every frame)
+	cgp::numarray<cgp::vec3> weight_colors_cache;
+	int weight_colors_cached_joint = -2;  // -2 = invalid/uninitialized
+	weight_display_mode weight_colors_cached_mode = weight_display_mode::none;
 
 	cgp::timer_basic ds_timer;
+
+	// ****************************** //
+	// GPU Skinning
+	// ****************************** //
+	gpu_skinning_state gpu_state;
+	bool use_gpu_skinning = false;
 
 	// ****************************** //
 	// Timing
@@ -87,6 +110,7 @@ struct scene_structure : cgp::scene_inputs_generic {
 	timing_average timing_ds_phase1;
 	timing_average timing_ds_phase2;
 	timing_average timing_ds_normals;
+	timing_average timing_gpu_upload;
 	bool display_timings = false;
 
 	// ****************************** //

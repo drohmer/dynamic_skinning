@@ -1,0 +1,270 @@
+#include "gpu_skinning.hpp"
+#include "dynamic_skinning/oscillation_filter.hpp"
+#include <chrono>
+#include <algorithm>
+
+using namespace cgp;
+
+
+// ============================================================================
+// Raw OpenGL texture creation helpers
+// ============================================================================
+
+static void create_rgba32f_texture_2d(opengl_texture_image_structure& tex, int w, int h, const float* data = nullptr)
+{
+    tex.width = w;
+    tex.height = h;
+    tex.format = GL_RGBA32F;
+    tex.texture_type = GL_TEXTURE_2D;
+    glGenTextures(1, &tex.id);
+    glBindTexture(GL_TEXTURE_2D, tex.id);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_FLOAT, data);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+
+// ============================================================================
+// Initialization
+// ============================================================================
+
+void gpu_skinning_initialize(gpu_skinning_state& state,
+                             animated_model_structure const& model,
+                             std::string const& mesh_name,
+                             dynamic_skinning_state const& ds_state,
+                             mesh_drawable& drawable)
+{
+    // Clean up previous state if re-initializing
+    if (state.initialized) {
+        if (state.skinning_matrices_tex.id)  glDeleteTextures(1, &state.skinning_matrices_tex.id);
+        if (state.joint_global_tex.id)       glDeleteTextures(1, &state.joint_global_tex.id);
+        if (state.filtered_velocity_tex.id)  glDeleteTextures(1, &state.filtered_velocity_tex.id);
+        if (state.hier_weights_tex.id)       glDeleteTextures(1, &state.hier_weights_tex.id);
+        state = gpu_skinning_state();
+    }
+
+    auto const& rigged_mesh = model.rigged_mesh.at(mesh_name);
+    auto const& controller = rigged_mesh.controller_skinning;
+
+    state.N_joints = model.skeleton.size();
+    state.N_vertex = rigged_mesh.mesh_bind_pose.position.size();
+
+    // ---- 1. Compile shader ----
+    state.skinning_shader.load(project::path + "shaders/skinning/skinning.vert.glsl",
+                                project::path + "shaders/skinning/skinning.frag.glsl");
+
+    // ---- 2. Create dynamic textures (updated per frame) ----
+    create_rgba32f_texture_2d(state.skinning_matrices_tex, 4, state.N_joints);
+    create_rgba32f_texture_2d(state.joint_global_tex, 4, state.N_joints);
+    create_rgba32f_texture_2d(state.filtered_velocity_tex, 1, state.N_joints);  // 1 x N_joints
+
+    // ---- 3. Create & fill static hier_weights_tex (tiled 2D) ----
+    {
+        int const M = state.MAX_HIER_PER_VERTEX;
+        int const TW = state.HIER_TILE_W;
+        int tex_w = M * TW;
+        int tex_h = (state.N_vertex + TW - 1) / TW;
+        state.hier_tex_rows = tex_h;
+
+        std::vector<float> data(tex_w * tex_h * 4, 0.0f);
+
+        for (int v = 0; v < state.N_vertex; ++v) {
+            int tile_row = v / TW;
+            int tile_col = v % TW;
+            auto const& joints = ds_state.joints_per_vertex[v];
+            auto const& weights = ds_state.hierarchical_weights[v];
+            int count = std::min(static_cast<int>(joints.size()), M);
+            for (int k = 0; k < count; ++k) {
+                int px = tile_col * M + k;
+                int py = tile_row;
+                int offset = (py * tex_w + px) * 4;
+                data[offset + 0] = static_cast<float>(joints[k]);
+                data[offset + 1] = weights[k];
+                data[offset + 2] = ds_state.weight_bend[v];
+                data[offset + 3] = 0.0f;
+            }
+        }
+        create_rgba32f_texture_2d(state.hier_weights_tex, tex_w, tex_h, data.data());
+    }
+
+    // ---- 4. Prepare LBS VBO data ----
+    {
+        numarray<vec4> joint_indices_vbo(state.N_vertex);
+        numarray<vec4> joint_weights_vbo(state.N_vertex);
+
+        for (int v = 0; v < state.N_vertex; ++v) {
+            auto const& deps = controller.vertex_to_joint_dependence[v];
+            int N_dep = deps.size();
+
+            struct entry { int skel_idx; float weight; };
+            std::vector<entry> entries;
+            entries.reserve(N_dep);
+            for (int k = 0; k < N_dep; ++k) {
+                int rig_idx = deps[k].joint_index;
+                int skel_idx = controller.rig_index_to_skeleton_index[rig_idx];
+                entries.push_back({skel_idx, deps[k].weight});
+            }
+
+            std::sort(entries.begin(), entries.end(),
+                      [](entry const& a, entry const& b) { return a.weight > b.weight; });
+
+            vec4 idx = {0, 0, 0, 0};
+            vec4 wgt = {0, 0, 0, 0};
+            int count = std::min(static_cast<int>(entries.size()), 4);
+            float sum = 0.0f;
+            for (int k = 0; k < count; ++k) {
+                idx[k] = static_cast<float>(entries[k].skel_idx);
+                wgt[k] = entries[k].weight;
+                sum += wgt[k];
+            }
+            if (sum > 1e-6f) {
+                for (int k = 0; k < count; ++k)
+                    wgt[k] /= sum;
+            }
+
+            joint_indices_vbo[v] = idx;
+            joint_weights_vbo[v] = wgt;
+        }
+
+        drawable.initialize_supplementary_data_on_gpu(joint_indices_vbo, 4);
+        drawable.initialize_supplementary_data_on_gpu(joint_weights_vbo, 5);
+    }
+
+    // ---- 5. Initialize angular velocity trackers (one per joint) ----
+    state.joint_trackers.resize(state.N_joints);
+    for (int j = 0; j < state.N_joints; ++j)
+        state.joint_trackers[j] = angular_velocity_tracker();
+    state.filtered_velocity.resize(state.N_joints);
+    state.filtered_velocity.fill({0, 0, 0});
+
+    state.initialized = true;
+}
+
+
+// ============================================================================
+// Per-frame update
+// ============================================================================
+
+void gpu_skinning_update(gpu_skinning_state& state,
+                         animated_model_structure const& model,
+                         std::string const& mesh_name,
+                         dynamic_skinning_parameters const& params,
+                         float time)
+{
+    if (!state.initialized) return;
+
+    using clock = std::chrono::high_resolution_clock;
+    auto t0 = clock::now();
+
+    auto const& controller = model.rigged_mesh.at(mesh_name).controller_skinning;
+
+    // ---- 1. Compute & upload skinning matrices T_j ----
+    {
+        std::vector<float> mat_data(4 * state.N_joints * 4, 0.0f);
+
+        for (int j = 0; j < state.N_joints; ++j) {
+            int base = j * 4 * 4;
+            mat_data[base + 0] = 1.0f;
+            mat_data[base + 5] = 1.0f;
+            mat_data[base + 10] = 1.0f;
+            mat_data[base + 15] = 1.0f;
+        }
+
+        int N_rig = controller.rig_index_to_skeleton_index.size();
+        for (int rig = 0; rig < N_rig; ++rig) {
+            int skel = controller.rig_index_to_skeleton_index[rig];
+            mat4 T = model.skeleton.joint_matrix_global[skel] * controller.inverse_bind_matrices[rig];
+
+            int base = skel * 4 * 4;
+            for (int col = 0; col < 4; ++col)
+                for (int row = 0; row < 4; ++row)
+                    mat_data[base + col * 4 + row] = T(row, col);
+        }
+
+        glBindTexture(GL_TEXTURE_2D, state.skinning_matrices_tex.id);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 4, state.N_joints,
+                        GL_RGBA, GL_FLOAT, mat_data.data());
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    // ---- 2. Upload joint_global_tex ----
+    {
+        std::vector<float> global_data(4 * state.N_joints * 4, 0.0f);
+        for (int j = 0; j < state.N_joints; ++j) {
+            mat4 const& M = model.skeleton.joint_matrix_global[j];
+            int base = j * 4 * 4;
+            for (int col = 0; col < 4; ++col)
+                for (int row = 0; row < 4; ++row)
+                    global_data[base + col * 4 + row] = M(row, col);
+        }
+
+        glBindTexture(GL_TEXTURE_2D, state.joint_global_tex.id);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 4, state.N_joints,
+                        GL_RGBA, GL_FLOAT, global_data.data());
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    // ---- 3. Compute filtered angular velocity per joint on CPU ----
+    compute_filtered_angular_velocities(
+        state.joint_trackers, state.filtered_velocity,
+        model.skeleton, params, time);
+
+    // Upload to filtered_velocity_tex (1 x N_joints)
+    {
+        std::vector<float> filtered_data(state.N_joints * 4, 0.0f);
+        for (int j = 0; j < state.N_joints; ++j) {
+            filtered_data[j * 4 + 0] = state.filtered_velocity[j].x;
+            filtered_data[j * 4 + 1] = state.filtered_velocity[j].y;
+            filtered_data[j * 4 + 2] = state.filtered_velocity[j].z;
+        }
+        glBindTexture(GL_TEXTURE_2D, state.filtered_velocity_tex.id);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1, state.N_joints,
+                        GL_RGBA, GL_FLOAT, filtered_data.data());
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    auto t1 = clock::now();
+    state.timing_upload_ms = std::chrono::duration<float, std::milli>(t1 - t0).count();
+}
+
+
+// ============================================================================
+// Draw with GPU skinning
+// ============================================================================
+
+void gpu_skinning_draw(gpu_skinning_state& state,
+                       mesh_drawable& drawable,
+                       environment_structure const& env,
+                       dynamic_skinning_parameters const& params,
+                       bool display_bend_weights)
+{
+    if (!state.initialized) return;
+
+    auto saved_shader = drawable.shader;
+    auto saved_textures = drawable.supplementary_texture;
+
+    drawable.shader = state.skinning_shader;
+
+    drawable.supplementary_texture.clear();
+    drawable.supplementary_texture["skinning_matrices_tex"]  = state.skinning_matrices_tex;
+    drawable.supplementary_texture["joint_global_tex"]       = state.joint_global_tex;
+    drawable.supplementary_texture["filtered_velocity_tex"]  = state.filtered_velocity_tex;
+    drawable.supplementary_texture["hier_weights_tex"]       = state.hier_weights_tex;
+
+    glUseProgram(state.skinning_shader.id);
+
+    float bend_factor_val = DS_BEND_COUPLING * params.bend_magnitude;
+    opengl_uniform(state.skinning_shader, "ds_active", params.active ? 1 : 0);
+    opengl_uniform(state.skinning_shader, "hier_max", state.MAX_HIER_PER_VERTEX);
+    opengl_uniform(state.skinning_shader, "hier_tile_w", state.HIER_TILE_W);
+    opengl_uniform(state.skinning_shader, "bend_factor", bend_factor_val);
+    opengl_uniform(state.skinning_shader, "display_bend_weights", display_bend_weights ? 1 : 0);
+
+    draw(drawable, env);
+
+    drawable.shader = saved_shader;
+    drawable.supplementary_texture = saved_textures;
+}
