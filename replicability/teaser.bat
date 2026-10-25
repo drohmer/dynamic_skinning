@@ -7,7 +7,7 @@ rem
 rem Same as teaser.sh: builds the complete application with CMake and Visual Studio (code\complete.exe),
 rem then runs it in capture mode on the three examples of the teaser, and saves the frames as PNG images in
 rem replicability\output\teaser\ (giraffe\, clown\, train\). A window opens during each capture, and closes
-rem by itself after the last frame. See REPLICABILITY.txt for the description of the frames.
+rem by itself after the last frame. See replicability.txt for the description of the frames.
 
 setlocal
 pushd "%~dp0.."

@@ -91,7 +91,7 @@ To save images automatically: `DS_CAPTURE_DIR=captures DS_CAPTURE_MODEL=Giraffe 
 
 ## Replicability
 
-The script [`replicability/teaser.sh`](replicability/teaser.sh) ([`teaser.bat`](replicability/teaser.bat) on Windows) builds the code and reproduces the frames of the teaser figure of the paper (giraffe, clown and train examples) in `replicability/output/teaser/`. The installation of the dependencies on a vanilla macOS, Ubuntu or Windows, and the description of the output, are given in [`REPLICABILITY.txt`](REPLICABILITY.txt).
+The script [`replicability/teaser.sh`](replicability/teaser.sh) ([`teaser.bat`](replicability/teaser.bat) on Windows) builds the code and reproduces the frames of the teaser figure of the paper (giraffe, clown and train examples) in `replicability/output/teaser/`. The installation of the dependencies on a vanilla macOS, Ubuntu or Windows, and the description of the output, are given in [`replicability.txt`](replicability.txt).
 
 
 ## Blender add-on
