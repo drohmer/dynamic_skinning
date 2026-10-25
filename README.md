@@ -89,6 +89,11 @@ Parameters, with the notations of the paper:
 To save images automatically: `DS_CAPTURE_DIR=captures DS_CAPTURE_MODEL=Giraffe DS_CAPTURE_TIMES="1.0,1.5" build/complete`. The options are described in [`code/app_complete/capture/frame_capture.hpp`](code/app_complete/capture/frame_capture.hpp).
 
 
+## Replicability
+
+The script [`replicability/teaser.sh`](replicability/teaser.sh) ([`teaser.bat`](replicability/teaser.bat) on Windows) builds the code and reproduces the frames of the teaser figure of the paper (giraffe, clown and train examples) in `replicability/output/teaser/`. The installation of the dependencies on a vanilla macOS, Ubuntu or Windows, and the description of the output, are given in [`REPLICABILITY.txt`](REPLICABILITY.txt).
+
+
 ## Blender add-on
 
 `blender_addon/` contains a prototype of extension for Blender (5.0 and later) that applies dynamic skinning (oscillations and drag) to a rigged mesh. The computation is done in Python with numpy, and the offset of each vertex is added by a Geometry Nodes modifier placed after the Armature. The mesh reacts when a bone is manipulated in Pose Mode and during the playback of the animation. The parameters f, τ, A, D and γ are set in *Properties > Object > Dynamic Skinning*.

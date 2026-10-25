@@ -16,3 +16,4 @@ build_emscripten/
 /code/index.html
 __pycache__/
 *.blend1
+/replicability/output/

@@ -1,0 +1,57 @@
+Graphics Replicability Stamp
+============================
+
+Title:   Dynamic Skinning: Kinematics-Driven Cartoon Effects for Articulated Characters
+Authors: Damien Rohmer, Karim Salem, Niranjan Kalyanasundaram, Victor Zordan
+Venue:   IEEE Transactions on Visualization and Computer Graphics, 2026, DOI 10.1109/TVCG.2026.3653317
+
+Operating systems: macOS 13 or later, Ubuntu 22.04 or later, Windows 11.
+Reproduced figure: teaser figure (Fig. 1): giraffe, clown and train examples.
+
+
+1. Install the dependencies (vanilla installation)
+-------------------------------------------------
+
+The code needs a C++17 compiler, CMake (3.16 or later), pkg-config, OpenGL 3.3 and GLFW 3.
+
+macOS 13 or later:
+    xcode-select --install                    # Apple command line tools (C++ compiler, git)
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"   # Homebrew
+    brew install cmake pkg-config glfw
+
+Ubuntu 22.04 or later:
+    sudo apt update
+    sudo apt install -y git build-essential cmake pkg-config libglfw3-dev libgl1-mesa-dev
+
+Windows 11 (in a Command Prompt; GLFW is provided with the code):
+    winget install --id Git.Git -e
+    winget install --id Kitware.CMake -e
+    winget install --id Microsoft.VisualStudio.2022.Community -e --override "--wait --passive --add Microsoft.VisualStudio.Workload.NativeDesktop --includeRecommended"
+Then open a new Command Prompt (so that git and cmake are in the PATH).
+
+
+2. Get the code
+---------------
+
+    git clone https://github.com/drohmer/dynamic_skinning.git ~/dynamic_skinning          (macOS, Ubuntu)
+    git clone https://github.com/drohmer/dynamic_skinning.git C:\dynamic_skinning          (Windows)
+
+
+3. Build and reproduce the teaser figure
+----------------------------------------
+
+    bash ~/dynamic_skinning/replicability/teaser.sh          (macOS, Ubuntu)
+    C:\dynamic_skinning\replicability\teaser.bat            (Windows)
+
+The script builds the complete application (code/build/complete, or code\complete.exe on Windows), then runs it in capture
+mode on the three examples of the teaser. A window opens for each example and closes by itself (a display is
+required). The whole script takes a few minutes, most of it for the build.
+
+The frames are saved as PNG images in replicability/output/teaser/ (~/dynamic_skinning/replicability/output/teaser/,
+or C:\dynamic_skinning\replicability\output\teaser\ on Windows):
+    giraffe/   the neck swings from left to right (t = 3.0 to 3.5 s), then the head lags and oscillates
+    clown/     the body swings from left to right (t = 3.0 to 3.5 s), then the arms and the hat oscillate
+    train/     the bumps of the engine propagate to the last wagon (delayed LBS)
+Each image is named <model>_<index>_t<animation time in seconds>.png. In the teaser, several consecutive
+frames are superimposed with transparency to show the motion: the frames t = 3.0 to 3.5 s give the swing of the
+giraffe and of the clown, and the following frames give the oscillation after the motion stops.
