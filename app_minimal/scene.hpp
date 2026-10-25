@@ -26,10 +26,12 @@ struct scene_structure : cgp::scene_inputs_generic {
 	float f   = 1.5f;   // frequency (Hz)
 	float tau = 0.67f;  // damping τ (s)
 	float A   = 0.88f;  // amplitude
+	// ---- Weight D of the drag (lag proportional to the angular velocity, independent of the oscillations) ----
+	float D   = 0.5f;
 	bool dynamic_skinning_active = true;
 
 	// ---- Dynamic skinning ----
-	dynamic_skinning_parameters ds_parameters;  // f, τ, A converted to the parameters of the module
+	dynamic_skinning_parameters ds_parameters;  // f, τ, A, D converted to the parameters of the module
 	dynamic_skinning_state ds_state;            // hierarchical weights β_ij, history of the angular velocities Ω_j
 	cgp::timer_basic timer;                     // time t of the oscillations (not periodic, unlike the animation)
 

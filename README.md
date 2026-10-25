@@ -147,7 +147,7 @@ Indépendance au framerate : la vitesse angulaire de chaque joint est mesurée �
   - **`gpu_skinning/`** — Velocity skinning GPU : upload des textures de données, calcul du filtre sur CPU, rendu via le vertex shader
   - **`interaction/`** — Picking interactif des joints : rotation et translation incrémentales à la souris ; zoom par pinch à deux doigts sur écran tactile (version web)
   - **`capture/`** — Captures d'écran automatiques
-- **`app_minimal/`** — Application minimale (exécutable `minimal`, CPU seulement, cylindre / girafe / clown, caméra et paramètres f, τ, A) ; voir son README
+- **`app_minimal/`** — Application minimale (exécutable `minimal`, CPU seulement, cylindre / girafe / clown, caméra et paramètres f, τ, A, D) ; voir son README
 - **`shaders/`** — Shaders GLSL
   - `mesh/` — Shaders standard (Phong)
   - `single_color/` — Shader couleur uniforme (squelette)

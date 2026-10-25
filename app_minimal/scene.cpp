@@ -67,6 +67,7 @@ void scene_structure::display_frame()
 		ds_parameters.frequency   = 2 * Pi * f;  // ω = 2π f
 		ds_parameters.attenuation = 1 / tau;
 		ds_parameters.amplitude   = A;
+		ds_parameters.drag        = D;
 		dynamic_skinning_apply(ds_state, ds_parameters, model, mesh_name, timer.t);
 	}
 
@@ -94,6 +95,7 @@ void scene_structure::display_gui()
 	ImGui::SliderFloat("Frequency f", &f, 0.0f, 5.0f, "%.2f Hz");
 	ImGui::SliderFloat("Damping tau", &tau, 0.05f, 5.0f, "%.2f s", ImGuiSliderFlags_Logarithmic);
 	ImGui::SliderFloat("Amplitude A", &A, 0.0f, 5.0f, "%.2f");
+	ImGui::SliderFloat("Drag D", &D, 0.0f, 3.0f, "%.2f");
 
 	ImGui::End();
 }

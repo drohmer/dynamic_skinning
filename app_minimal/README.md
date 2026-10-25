@@ -1,6 +1,6 @@
 # Application minimale — Dynamic Skinning sur CPU
 
-Version la plus simple possible du dynamic skinning, sur trois modèles : le cylindre, la girafe et le clown. Il n'y a ni GPU, ni picking des joints, ni délai. On peut seulement tourner la caméra, choisir le modèle et régler les paramètres du noyau d'oscillation.
+Version la plus simple possible du dynamic skinning, sur trois modèles : le cylindre, la girafe et le clown. Il n'y a ni GPU, ni picking des joints, ni délai. On peut seulement tourner la caméra, choisir le modèle et régler les paramètres du noyau d'oscillation et le drag.
 
 L'algorithme n'est pas dupliqué : comme l'application complète, elle utilise `dynamic_skinning_source/` (la méthode) et `lib_helper/` (personnage animé, loaders et animations).
 
@@ -37,5 +37,11 @@ Le noyau d'oscillation est κ(t) = A exp(−t/τ) sin(2π f t), avec :
 | `f`   | fréquence de l'oscillation (Hz) | 1.5 |
 | `tau` | amortissement τ (s) | 0.67 |
 | `A`   | amplitude | 0.88 |
+
+Et le poids du drag (retard proportionnel à la vitesse angulaire, indépendant des oscillations) :
+
+| Variable | Rôle | Valeur par défaut |
+|---|---|---|
+| `D`   | drag | 0.5 |
 
 Souris : clic gauche glissé = rotation, clic droit glissé ou molette = zoom, Ctrl + clic gauche = translation.
