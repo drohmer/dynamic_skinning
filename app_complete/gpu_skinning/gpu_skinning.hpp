@@ -2,8 +2,8 @@
 
 #include "cgp/cgp.hpp"
 #include "environment.hpp"
-#include "dynamic_skinning/dynamic_skinning.hpp"
-#include "dynamic_skinning/delayed_lbs.hpp"
+#include "dynamic_skinning_source/dynamic_skinning.hpp"
+#include "dynamic_skinning_source/delayed_lbs.hpp"
 #include "animated_character/animated_model/animated_model.hpp"
 
 

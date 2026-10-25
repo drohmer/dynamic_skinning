@@ -1,12 +1,12 @@
 # ====== Basic Configuration ======
-TARGET      ?= project
+TARGET      ?= complete
 BUILD_DIR   ?= build
-SRC_DIRS    ?= src cgp
+SRC_DIRS    ?= app_complete dynamic_skinning_source lib_helper cgp
 CXX         ?= g++
 CXXSTD      ?= c++17
 
 # Header include directories
-INC_DIRS    := . src cgp
+INC_DIRS    := . app_complete lib_helper cgp
 
 # Preprocessor definitions (-D)
 DEFINES     := SOLUTION                        # Enable solution code

@@ -7,7 +7,7 @@
 
 #include "animated_character/animated_character.hpp"
 
-#include "dynamic_skinning/dynamic_skinning.hpp"
+#include "dynamic_skinning_source/dynamic_skinning.hpp"
 #include "interaction/joint_picking.hpp"
 #include "interaction/touch_gestures.hpp"
 #include "gpu_skinning/gpu_skinning.hpp"

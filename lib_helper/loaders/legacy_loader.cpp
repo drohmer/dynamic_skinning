@@ -1,6 +1,5 @@
 #include "legacy_loader.hpp"
 #include "file_readers.hpp"
-#include "environment.hpp"
 
 #include <fstream>
 #include <sstream>
@@ -68,7 +67,7 @@ static float find_animation_length(numarray<numarray<anim_keyframe>> const& anim
 character_structure load_legacy_character(std::string const& directory, float scaling, bool invert_normals,
                                           rotation_transform const& rotation)
 {
-    std::string dir = project::path + directory;
+    std::string const& dir = directory;
 
     // Load mesh with vertex correspondance (OBJ may duplicate vertices for UV)
     numarray<numarray<int>> vertex_correspondance;

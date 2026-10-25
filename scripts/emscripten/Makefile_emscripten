@@ -4,14 +4,14 @@
 # $ emrun index.html
 
 # ====== Basic Configuration ======
-TARGET      ?= project.html
+TARGET      ?= complete.html
 BUILD_DIR   ?= build_emscripten
-SRC_DIRS    ?= src cgp
+SRC_DIRS    ?= app_complete dynamic_skinning_source lib_helper cgp
 CXX         := emcc
 CXXSTD      ?= c++17
 
 # Header include directories
-INC_DIRS    := . src cgp
+INC_DIRS    := . app_complete lib_helper cgp
 
 # Preprocessor definitions (-D)
 DEFINES     := SOLUTION                        # Enable solution code
@@ -62,6 +62,6 @@ run: $(TARGET)
 	emrun index.html
 
 clean:
-	$(RM) -r $(BUILD_DIR) $(TARGET) index.html project.js project.wasm project.data $(DEPS)
+	$(RM) -r $(BUILD_DIR) $(TARGET) index.html complete.js complete.wasm complete.data $(DEPS)
 
 -include $(DEPS)

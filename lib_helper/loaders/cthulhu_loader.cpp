@@ -1,6 +1,5 @@
 #include "cthulhu_loader.hpp"
 #include "file_readers.hpp"
-#include "environment.hpp"
 
 #include <fstream>
 #include <sstream>

@@ -70,7 +70,7 @@ void scene_structure::load_model(std::string const& name)
 		auto models = get_legacy_models();
 		for (auto const& m : models) {
 			if (m.name == name) {
-				character = load_legacy_character(m.directory, m.scaling, m.invert_normals, m.rotation);
+				character = load_legacy_character(project::path + m.directory, m.scaling, m.invert_normals, m.rotation);
 				break;
 			}
 		}

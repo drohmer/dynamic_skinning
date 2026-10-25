@@ -1,5 +1,5 @@
 #include "gpu_skinning.hpp"
-#include "dynamic_skinning/oscillation_filter.hpp"
+#include "dynamic_skinning_source/oscillation_filter.hpp"
 #include <chrono>
 #include <algorithm>
 

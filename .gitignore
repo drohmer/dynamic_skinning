@@ -7,9 +7,10 @@ imgui.ini
 **/.DS_Store
 # Build outputs
 build_emscripten/
-/project
-/project.html
-/project.js
-/project.wasm
-/project.data
+/complete
+/minimal
+/complete.html
+/complete.js
+/complete.wasm
+/complete.data
 /index.html
