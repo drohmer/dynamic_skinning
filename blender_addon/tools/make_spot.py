@@ -1,4 +1,5 @@
-# Spot the cow (assets/spot/ of the applications) in Blender: importer of the asset format of the applications
+# Spot the cow (blender_addon/assets/spot/, copied from the assets of the applications) in Blender: importer of the
+# asset format of the applications
 # (mesh.obj, skeleton_*, rig_joint, rig_weights, texture.png), and the animation of the applications:
 # the head nods (neck), pauses, then twists on each side so that the ears oscillate.
 
@@ -8,8 +9,7 @@ import os
 import bpy
 from mathutils import Matrix, Quaternion, Vector
 
-ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
-SPOT = os.path.join(ROOT, "assets", "spot")
+SPOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "spot")
 
 
 def read_rows(filename, convert):

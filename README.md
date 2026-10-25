@@ -148,11 +148,11 @@ Indépendance au framerate : la vitesse angulaire de chaque joint est mesurée �
   - **`interaction/`** — Picking interactif des joints : rotation et translation incrémentales à la souris ; zoom par pinch à deux doigts sur écran tactile (version web)
   - **`capture/`** — Captures d'écran automatiques
 - **`app_minimal/`** — Application minimale (exécutable `minimal`, CPU seulement, cylindre / girafe / clown, caméra et paramètres f, τ, A, D) ; voir son README
-- **`blender_addon/`** — Prototype d'add-on Blender (5.0+) : dynamic skinning en numpy, appliqué par un modificateur Geometry Nodes ; voir son README
+- **`blender_addon/`** — Prototype d'add-on Blender (5.0+), autonome avec ses propres modèles (`blender_addon/assets/`) : dynamic skinning en numpy, appliqué par un modificateur Geometry Nodes ; voir son README
 - **`shaders/`** — Shaders GLSL
   - `mesh/` — Shaders standard (Phong)
   - `single_color/` — Shader couleur uniforme (squelette)
   - `skinning/` — Shaders GPU skinning (LBS + bend deformer dans le vertex shader, Phong dans le fragment shader)
 - **`cgp/`** — Framework graphique cgp-2027 (ne pas modifier, à part la suppression de warnings « unused » quand `CGP_NO_DEBUG` est défini)
 - **`assets/`** — Données des modèles (Cthulhu en plusieurs résolutions, modèles legacy)
-- Ancien code GPU de référence : déplacé hors du projet, dans `../sources-gpu/`
+- Ancien code GPU de référence : déplacé hors du projet, dans `../archive/sources-gpu/`

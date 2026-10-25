@@ -11,7 +11,7 @@ import bpy
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tools"))
 import dynamic_skinning
 from dynamic_skinning import blender_link
 from make_cylinder import build_cylinder_scene

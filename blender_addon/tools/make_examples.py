@@ -1,5 +1,5 @@
 # Generate the example files blender_addon/examples/cylinder.blend and spot.blend (dynamic skinning enabled)
-#   blender -b --factory-startup --python blender_addon/tests/make_examples.py
+#   blender -b --factory-startup --python blender_addon/tools/make_examples.py
 # The files open with the dynamic skinning running when the add-on is installed (otherwise the mesh is static).
 
 import math
@@ -9,15 +9,15 @@ import sys
 import bpy
 from mathutils import Vector
 
-TESTS = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(TESTS, ".."))
-sys.path.insert(0, TESTS)
+TOOLS = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(TOOLS, ".."))
+sys.path.insert(0, TOOLS)
 import dynamic_skinning
 from dynamic_skinning import blender_link
 from make_cylinder import build_cylinder_scene
 from make_spot import build_spot_scene
 
-OUTPUT = os.path.join(TESTS, "..", "examples")
+OUTPUT = os.path.join(TOOLS, "..", "examples")
 os.makedirs(OUTPUT, exist_ok=True)
 dynamic_skinning.register()
 

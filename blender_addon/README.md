@@ -15,11 +15,11 @@ Puis, dans Blender : *Edit > Preferences > Get Extensions > ▾ > Install from D
 Avec l'extension installée, ouvrir un fichier de `blender_addon/examples/` puis lancer la lecture (Espace) :
 
 - **`cylinder.blend`** : le cylindre des applications ; l'os du bout tourne de 90°, pause, revient.
-- **`spot.blend`** : Spot la vache (`assets/spot/`, texture incluse dans le fichier), avec l'animation des applications : la tête hoche, puis tourne de chaque côté et les oreilles oscillent.
+- **`spot.blend`** : Spot la vache (`blender_addon/assets/spot/`, texture incluse dans le fichier), avec l'animation des applications : la tête hoche, puis tourne de chaque côté et les oreilles oscillent.
 
 Le dynamic skinning redémarre tout seul à l'ouverture du fichier. L'armature est en Pose Mode : on peut aussi tourner un os à la main (R). Sans l'extension, le maillage s'affiche sans dynamic skinning.
 
-Les fichiers sont générés par `blender -b --factory-startup --python blender_addon/tests/make_examples.py`.
+Les fichiers sont générés par `blender -b --factory-startup --python blender_addon/tools/make_examples.py`.
 
 ## Utilisation sur ses propres modèles
 
@@ -47,16 +47,14 @@ Coût d'une mise à jour (Python et numpy en float32, Mac de développement, san
 - Le LBS est recalculé en numpy (pas de Dual Quaternion, pas de shape keys avant l'Armature).
 - Pas de délai (dLBS), pas d'origines flexibles, pas de version GPU.
 
-## Tests
+## Contenu du répertoire
+
+- **`dynamic_skinning/`** : l'extension (la seule partie installée, et le contenu du zip).
+- **`examples/`** : les fichiers d'exemple.
+- **`assets/spot/`** : le modèle de Spot (copié depuis `assets/spot/` des applications). L'add-on est autonome : ni l'extension, ni les exemples, ni les outils n'utilisent le reste du dépôt.
+- **`tools/`** : génération des exemples (`make_examples.py`), avec la construction du cylindre riggé (`make_cylinder.py`) et un petit importeur du format des assets des applications (`make_spot.py` : `mesh.obj`, `skeleton_*`, `rig_joint`, `rig_weights`, `texture.png`), réutilisable pour d'autres modèles.
+- **`tests/test_cylinder.py`** : test de non-régression sans interface. L'os du cylindre tourne de 90° en 0.7 s ; le test affiche le décalage maximal à quelques instants et enregistre des rendus Workbench :
 
 ```bash
-# Test headless : cylindre riggé, os tourné de 90° en 0.7 s, rendus Workbench dans <dossier>
 blender -b --factory-startup --python blender_addon/tests/test_cylinder.py -- <dossier>
-# Démos avec l'interface, sans installer l'extension : cylindre ou Spot, prêts à manipuler en Pose Mode
-blender --factory-startup --python blender_addon/tests/demo_cylinder.py
-blender --factory-startup --python blender_addon/tests/demo_spot.py
-# Ouverture d'un fichier d'exemple et lecture, avec captures du viewport dans <dossier>
-DS_AUTOTEST=<dossier> blender --factory-startup --python blender_addon/tests/test_open_example.py -- blender_addon/examples/spot.blend
 ```
-
-`make_spot.py` contient un petit importeur du format des assets des applications (`mesh.obj`, `skeleton_*`, `rig_joint`, `rig_weights`, `texture.png`), réutilisable pour les autres modèles.
