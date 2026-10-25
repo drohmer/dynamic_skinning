@@ -9,6 +9,7 @@
 
 // Custom scene of this code
 #include "scene.hpp"
+#include "capture/frame_capture.hpp"
 
 
 
@@ -18,6 +19,9 @@
 // *************************** //
 
 scene_structure scene;
+
+// Automatic screenshots (enabled with the DS_CAPTURE_DIR environment variable)
+frame_capture_structure capture;
 
 
 // The rest of this code is a generic initialization and animation loop that can be applied to different scenes
@@ -56,6 +60,23 @@ int main(int, char* argv[])
 	std::cout << "Initialize data of the scene ..." << std::endl;
 	scene.initialize();
 	std::cout << "Initialization finished\n" << std::endl;
+
+	capture.initialize_from_environment();
+	if (capture.active) {
+		if (!capture.model.empty())
+			scene.load_model(capture.model);
+		if (capture.has_eye) {
+			auto& cam = scene.camera_control.camera_model;
+			cam.look_at(capture.eye, cam.center_of_rotation, {0, 1, 0});
+		}
+		if (capture.gpu >= 0)
+			scene.use_gpu_skinning = (capture.gpu == 1);
+		if (capture.dynamic_skinning >= 0)
+			scene.ds_params.active = (capture.dynamic_skinning == 1);
+		scene.character.timer.start();
+		scene.animation_running = true;
+		scene.show_settings = (capture.gui == 2);
+	}
 
 
 	// ************************ //
@@ -119,14 +140,19 @@ void animation_loop()
 
 	imgui_create_frame();
 	ImGui::GetIO().FontGlobalScale = project::gui_scale;
-	ImGui::Begin("GUI", NULL, ImGuiWindowFlags_AlwaysAutoResize);
 	scene.inputs.mouse.on_gui = ImGui::GetIO().WantCaptureMouse;
 	scene.inputs.time_interval = time_interval;
 
 
-	// Display the ImGUI interface (button, sliders, etc)
-	display_gui_default();
+	// Display the ImGUI interface: main toolbar, and the advanced settings in a separate window
 	scene.display_gui();
+	if (scene.show_settings) {
+		ImGui::SetNextWindowPos(ImVec2(10, 130), ImGuiCond_FirstUseEver);
+		ImGui::Begin("Settings", &scene.show_settings, ImGuiWindowFlags_AlwaysAutoResize);
+		display_gui_default();
+		scene.display_gui_settings();
+		ImGui::End();
+	}
 
 	// Handle camera behavior in standard frame
 	scene.idle_frame();
@@ -134,10 +160,17 @@ void animation_loop()
 	// Call the display of the scene
 	scene.display_frame();
 
+	// Save a screenshot (before the GUI is drawn, unless requested) when in capture mode
+	if (capture.gui == 0)
+		capture.update(scene.character.timer.t, scene.current_model_name);
+
 
 	// End of ImGui display and handle GLFW events
-	ImGui::End();
 	imgui_render_frame(scene.window.glfw_window);
+	if (capture.gui > 0)
+		capture.update(scene.character.timer.t, scene.current_model_name);
+	if (capture.finished())
+		glfwSetWindowShouldClose(scene.window.glfw_window, true);
 	glfwSwapBuffers(scene.window.glfw_window);
 	glfwPollEvents();
 }

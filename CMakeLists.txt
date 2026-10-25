@@ -106,12 +106,12 @@ if(EMSCRIPTEN)
     set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".html")
     target_link_options(${PROJECT_NAME} PRIVATE
         -sMAX_WEBGL_VERSION=2 -sUSE_GLFW=3 -sALLOW_MEMORY_GROWTH=1
-        --preload-file "${CMAKE_SOURCE_DIR}/shaders/@shaders/"
+        "SHELL:--preload-file ${CMAKE_SOURCE_DIR}/shaders/@shaders/"
     )
     file(GLOB ASSETS_FILES "${CMAKE_SOURCE_DIR}/assets/*")
     if(ASSETS_FILES)
         target_link_options(${PROJECT_NAME} PRIVATE
-            --preload-file "${CMAKE_SOURCE_DIR}/assets/@assets/"
+            "SHELL:--preload-file ${CMAKE_SOURCE_DIR}/assets/@assets/"  # SHELL: avoids the de-duplication of --preload-file
         )
     endif()
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

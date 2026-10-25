@@ -223,6 +223,7 @@ void dynamic_skinning_display_gui(dynamic_skinning_parameters& params)
     ImGui::Checkbox("Active", &params.active);
     if (params.active) {
         ImGui::SliderFloat("Amplitude", &params.amplitude, 0.0f, 2.0f);
+        ImGui::SliderFloat("Drag", &params.drag, 0.0f, 3.0f);
         ImGui::SliderFloat("Frequency", &params.frequency, 0.0f, 30.0f);
         ImGui::SliderFloat("Attenuation", &params.attenuation, 0.0f, 5.0f);
         ImGui::SliderFloat("Freq Slope", &params.frequency_slope, 0.0f, 30.0f);

@@ -78,6 +78,7 @@ void main()
     // 2. Dynamic Skinning (pre-filtered velocity + bend deformer)
     // ========================================================================
     vec3 deformation = vec3(0.0);
+    vec3 normal_deformation = vec3(0.0);  // normals follow the same per-joint rotations
 
     if (ds_active != 0) {
         // Tiled addressing for hier_weights_tex
@@ -114,6 +115,10 @@ void main()
 
             // (R - I) * v = sin(theta) * (od x v) + (cos(theta) - 1) * v
             deformation += beta * (sin(theta) * cross(od, v) + (cos(theta) - 1.0) * v);
+
+            // (R - I) * n with Rodrigues (n is not orthogonal to the axis)
+            vec3 od_x_n = cross(od, n_skinned);
+            normal_deformation += beta * (sin(theta) * od_x_n + (1.0 - cos(theta)) * cross(od, od_x_n));
         }
     }
 
@@ -124,7 +129,7 @@ void main()
     vec4 world_position = model * vec4(final_position, 1.0);
 
     fragment.position = world_position.xyz;
-    fragment.normal   = mat3(transpose(inverse(model))) * normalize(n_skinned);
+    fragment.normal   = mat3(transpose(inverse(model))) * normalize(n_skinned + normal_deformation);
     fragment.uv       = vertex_uv;
 
     // Encode bend weight γ^bend as color: white (w=0) → red (w=1)

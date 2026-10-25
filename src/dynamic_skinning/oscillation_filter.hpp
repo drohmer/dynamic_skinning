@@ -71,7 +71,8 @@ inline void compute_filtered_angular_velocities(
         auto& velocity_history = trackers[joint].angular_velocity_history;
         if (velocity_history.size() < 2) continue;
 
-        cgp::vec3 angular_velocity = velocity_history[velocity_history.size() - 1];
+        // Drag term (velocity skinning), weighted by D
+        cgp::vec3 angular_velocity = params.drag * velocity_history[velocity_history.size() - 1];
 
         if (static_cast<int>(velocity_history.size()) > DS_N_INTEGRAL) {
             cgp::vec3 v_integral = {0, 0, 0};
@@ -79,6 +80,7 @@ inline void compute_filtered_angular_velocities(
                 cgp::vec3 v = velocity_history[velocity_history.size() - 1 - k];
                 v_integral += v * kernel_derivative(k, params);
             }
+            // Oscillation term, weighted by A:  D * Omega + A * (Omega * kappa')
             float A = params.amplitude / DS_AMPLITUDE_SCALING;
             angular_velocity = angular_velocity + A * v_integral;
         }

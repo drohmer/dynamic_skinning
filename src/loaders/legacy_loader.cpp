@@ -65,7 +65,8 @@ static float find_animation_length(numarray<numarray<anim_keyframe>> const& anim
 
 // ---- Main loader ----
 
-character_structure load_legacy_character(std::string const& directory, float scaling, bool invert_normals)
+character_structure load_legacy_character(std::string const& directory, float scaling, bool invert_normals,
+                                          rotation_transform const& rotation)
 {
     std::string dir = project::path + directory;
 
@@ -73,6 +74,8 @@ character_structure load_legacy_character(std::string const& directory, float sc
     numarray<numarray<int>> vertex_correspondance;
     mesh m = mesh_load_file_obj(dir + "mesh.obj", vertex_correspondance);
     m.position *= scaling;
+    for (int k = 0; k < m.position.size(); ++k)
+        m.position[k] = rotation * m.position[k];
     if (invert_normals) {
         // Flip triangle winding
         for (int k = 0; k < m.connectivity.size(); ++k)
@@ -128,6 +131,11 @@ character_structure load_legacy_character(std::string const& directory, float sc
         skeleton.parent_index[k] = parent_indices[k];
         skeleton.joint_matrix_local[k] = build_joint_matrix(rest_translations[k] * scaling, rest_rotations[k]);
     }
+    // Global rotation of the model: applied to the root joints
+    mat4 const M_rotation = mat4::build_affine(rotation.matrix(), vec3{0, 0, 0});
+    for (int k = 0; k < N_joint; ++k)
+        if (parent_indices[k] < 0)
+            skeleton.joint_matrix_local[k] = M_rotation * skeleton.joint_matrix_local[k];
     skeleton.update_joint_matrix_local_to_global();
 
     // ---- Build controller_skinning ----
@@ -174,6 +182,8 @@ character_structure load_legacy_character(std::string const& directory, float sc
             for (int t = 0; t < N_key; ++t) {
                 anim.times[k][t] = raw_anim[k][t].time;
                 anim.matrix[k][t] = build_joint_matrix(raw_anim[k][t].translation, raw_anim[k][t].rotation);
+                if (parent_indices[k] < 0)
+                    anim.matrix[k][t] = M_rotation * anim.matrix[k][t];
             }
         }
     }
@@ -199,6 +209,10 @@ character_structure load_legacy_character(std::string const& directory, float sc
     rigged.mesh_bind_pose = m;
     rigged.mesh_deformed = m;
     rigged.controller_skinning = controller;
+    // Per-vertex bend weight γ^bend: 0.5 for all legacy models, as in the original code
+    // (init_local_buffers: weight_flappy.fill(0.5f))
+    rigged.weight_bend.resize(m.position.size());
+    rigged.weight_bend.fill(0.5f);
     model.rigged_mesh["body"] = rigged;
     model.animation["Default"] = anim;
 
@@ -232,10 +246,10 @@ character_structure load_legacy_character(std::string const& directory, float sc
 std::vector<legacy_model_entry> get_legacy_models()
 {
     return {
-        {"Clown",       "assets/clown/",        1.0f,  false},
-        {"Dragon",      "assets/dragon/",       0.09f, false},
-        {"Girafe",      "assets/girafe/",       2.0f,  true},
-        {"Snail",       "assets/snail/",        1.0f,  false},
-        {"Spot",        "assets/spot/",         1.0f,  false},
+        {"Clown",       "assets/clown/",        1.0f,  false, {}},
+        {"Dragon",      "assets/dragon/",       0.09f, false, {}},
+        {"Girafe",      "assets/girafe/",       2.0f,  true, {}},
+        {"Snail",       "assets/snail/",        1.0f,  false, rotation_transform::from_axis_angle({1, 0, 0}, -Pi / 2)},  // Z-up model
+        {"Spot",        "assets/spot/",         1.0f,  false, rotation_transform::from_axis_angle({1, 0, 0}, -Pi / 2)},  // Z-up model
     };
 }

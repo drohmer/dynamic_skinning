@@ -9,6 +9,7 @@
 
 #include "dynamic_skinning/dynamic_skinning.hpp"
 #include "interaction/joint_picking.hpp"
+#include "interaction/touch_gestures.hpp"
 #include "gpu_skinning/gpu_skinning.hpp"
 #include "loaders/cylinder_loader.hpp"
 #include "loaders/legacy_loader.hpp"
@@ -85,8 +86,10 @@ struct scene_structure : cgp::scene_inputs_generic {
 	joint_picking_state picking;
 	cgp::numarray<cgp::mat4> interactive_deformation;
 	cgp::numarray<cgp::mat4> skeleton_local_rest;  // local matrices restored each frame before animation
+	float dragon_flap_frequency = 0.0f;  // (Hz) wing beat frequency of the current dragon "Flight" animation
 	mesh_drawable sphere_picking;
 	bool camera_mode = false;  // false = bone-edit mode, true = camera mode
+	touch_gesture_state touch;  // pinch zoom on touch screens (web version)
 	weight_display_mode weight_display = weight_display_mode::none;
 
 	// Cache for weight color visualization (avoid recomputing every frame)
@@ -100,7 +103,7 @@ struct scene_structure : cgp::scene_inputs_generic {
 	// GPU Skinning
 	// ****************************** //
 	gpu_skinning_state gpu_state;
-	bool use_gpu_skinning = false;
+	bool use_gpu_skinning = true;
 
 	// ****************************** //
 	// Timing
@@ -114,20 +117,32 @@ struct scene_structure : cgp::scene_inputs_generic {
 	bool display_timings = false;
 
 	// ****************************** //
+	// GUI
+	// ****************************** //
+	bool show_settings = false;      // advanced settings window (hidden by default)
+	bool animation_running = false;  // state of the Play/Pause button
+
+	// ****************************** //
 	// Functions
 	// ****************************** //
 
 	void initialize();
 	void display_frame();
-	void display_gui();
+	void display_gui();           // main toolbar (mode, model, play, dynamic skinning)
+	void display_gui_settings();  // content of the advanced settings window
 
 	void mouse_move_event();
 	void mouse_click_event();
+	void mouse_scroll_event();
 	void keyboard_event();
 	void idle_frame();
 
 	// Reload dynamic skinning state after model change
 	void reinitialize_after_model_change();
+	// Dragon: rebuild the "Flight" animation when the frequency f of the oscillations has changed
+	void update_dragon_flight_frequency();
+	// Zoom: multiply the camera distance to its center by factor
+	void zoom_camera(float factor);
 	// Load a model by name
 	void load_model(std::string const& name);
 

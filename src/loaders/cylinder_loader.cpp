@@ -1,4 +1,5 @@
 #include "cylinder_loader.hpp"
+#include "procedural_animations.hpp"
 
 using namespace cgp;
 
@@ -57,77 +58,24 @@ character_structure load_cylinder_bending()
     model.skeleton.update_joint_matrix_local_to_global();
 
     // =============================================
-    // 2. Setup animation (bending/twisting)
+    // 2. Setup animation (bending up / down)
     // =============================================
-    skeleton_animation_structure anim;
-    anim.joint_index.resize(N_joints);
-    anim.times.resize(N_joints);
-    anim.matrix.resize(N_joints);
-
-    // All 3 joints are animated
-    for (int k = 0; k < N_joints; ++k)
-        anim.joint_index[k] = k;
-
-    // Animation timing: each pose holds for `hold` seconds, transitions take `move` seconds.
-    //   straight (hold) → bend up (hold) → straight (hold) → bend down (hold) → ...
+    //   straight (pause) -> bend up (pause) -> straight (pause) -> bend down (pause) -> straight (loop)
+    // The transitions use a smooth ease-in-out (zero velocity at both ends): the joint starts and
+    // stops smoothly, so that the oscillations come from the motion and not from velocity jumps.
     float const hold = 2.0f;   // static hold duration at each pose
-    float const move = 0.5f;   // transition duration between poses
+    float const move = 0.7f;   // transition duration between poses
+    float const angle = Pi / 2;
 
-    mat4 M_straight = mat4::build_translation(0.5f, 0.0f, 0.0f);
-    mat4 M_bend_up, M_bend_down;
-    {
-        M_bend_up = mat4::build_rotation_from_axis_angle({0, 0, 1}, 3.14159f / 2.0f);
-        M_bend_up.apply_translation({0.5f, 0.0f, 0.0f});
-        M_bend_down = mat4::build_rotation_from_axis_angle({0, 0, 1}, -3.14159f / 2.0f);
-        M_bend_down.apply_translation({0.5f, 0.0f, 0.0f});
-    }
+    int const joint = 1;
+    pose_structure const straight = rest_pose(model.skeleton);
+    pose_structure const bend_up   = rotate_joint(model.skeleton, straight, joint, {0, 0, 1},  angle);
+    pose_structure const bend_down = rotate_joint(model.skeleton, straight, joint, {0, 0, 1}, -angle);
 
-    // Sequence of poses for joint 1
-    struct pose { mat4 matrix; };
-    pose poses[] = { {M_straight}, {M_bend_up}, {M_straight}, {M_bend_down}, {M_straight} };
-    int N_poses = 5;
-
-    // Build keyframes: for each pose, two keyframes (start and end of hold),
-    // with a transition of `move` seconds between consecutive poses.
-    // Total per pose pair: hold + move.  Last pose only has hold.
-    int N_frames = N_poses * 2;
-    float t = 0.0f;
-
-    numarray<float> times_joint1;
-    numarray<mat4>  matrices_joint1;
-    for (int p = 0; p < N_poses; ++p) {
-        times_joint1.push_back(t);
-        matrices_joint1.push_back(poses[p].matrix);
-        t += hold;
-        times_joint1.push_back(t);
-        matrices_joint1.push_back(poses[p].matrix);
-        if (p < N_poses - 1) t += move;
-    }
-    float t_max = t;
-    N_frames = times_joint1.size();
-
-    // Joint 0: root, identity at all keyframe times
-    anim.times[0].resize(N_frames);
-    anim.matrix[0].resize(N_frames);
-    for (int k = 0; k < N_frames; ++k) {
-        anim.times[0][k] = times_joint1[k];
-        anim.matrix[0][k] = mat4::build_identity();
-    }
-
-    // Joint 1: bending up/down
-    anim.times[1] = times_joint1;
-    anim.matrix[1] = matrices_joint1;
-
-    // Joint 2: fixed relative to parent
-    anim.times[2].resize(N_frames);
-    anim.matrix[2].resize(N_frames);
-    for (int k = 0; k < N_frames; ++k) {
-        anim.times[2][k] = times_joint1[k];
-        anim.matrix[2][k] = mat4::build_translation(0.5f, 0.0f, 0.0f);
-    }
-
-    anim.time_max = t_max;
-    model.animation["Bending"] = anim;
+    numarray<pose_structure> poses = { straight, bend_up, straight, bend_down, straight };
+    numarray<float> hold_time = { hold / 2, hold, hold, hold, hold / 2 };
+    numarray<float> move_time = { move, move, move, move };
+    model.animation["Bending"] = build_pose_hold_animation(model.skeleton, poses, hold_time, move_time);
 
     // =============================================
     // 3. Generate cylinder mesh
@@ -201,6 +149,9 @@ character_structure load_cylinder_bending()
     rigged.mesh_bind_pose = cylinder;
     rigged.mesh_deformed = cylinder;
     rigged.controller_skinning = controller;
+    // Bend weight gamma^bend = 0.5, as in the original cylinder (weight_flappy.fill(0.5f))
+    rigged.weight_bend.resize(cylinder.position.size());
+    rigged.weight_bend.fill(0.5f);
 
     model.rigged_mesh["Cylinder"] = rigged;
 
@@ -208,7 +159,7 @@ character_structure load_cylinder_bending()
     // 6. Initialize character
     // =============================================
     character.current_animation_name = "Bending";
-    character.timer.event_period = t_max;
+    character.timer.event_period = model.animation["Bending"].time_max;
 
     // Initialize drawable
     mesh_drawable drawable;

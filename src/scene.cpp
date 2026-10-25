@@ -1,6 +1,8 @@
 #include "scene.hpp"
 #include "loaders/normalize_character.hpp"
+#include "loaders/procedural_animations.hpp"
 #include <chrono>
+#include <iomanip>
 
 using namespace cgp;
 
@@ -82,10 +84,34 @@ void scene_structure::load_model(std::string const& name)
 		auto models = get_legacy_models();
 		for (auto const& m : models) {
 			if (m.name == name) {
-				character = load_legacy_character(m.directory, m.scaling, m.invert_normals);
+				character = load_legacy_character(m.directory, m.scaling, m.invert_normals, m.rotation);
 				break;
 			}
 		}
+	}
+
+	// Pre-designed animations (built on the rest pose, before normalization)
+	if (name == "Girafe") {
+		character.animated_model.animation["Neck swing"] = build_girafe_neck_swing(character.animated_model.skeleton);
+		character.set_current_animation("Neck swing");
+	}
+	if (name == "Clown") {
+		character.animated_model.animation["Swing"] = build_clown_swing(character.animated_model.skeleton);
+		character.set_current_animation("Swing");
+	}
+	if (name == "Spot") {
+		character.animated_model.animation["Head nod & twist"] = build_spot_head_nod_twist(character.animated_model.skeleton);
+		character.set_current_animation("Head nod & twist");
+	}
+	if (name == "Snail") {
+		character.animated_model.animation["Head up & down"] = build_snail_head_up_down(character.animated_model.skeleton);
+		character.set_current_animation("Head up & down");
+	}
+	if (name == "Dragon") {
+		// The wings beat at the frequency f of the oscillations (resonance of the wing tips)
+		dragon_flap_frequency = ds_params.frequency / (2 * Pi);
+		character.animated_model.animation["Flight"] = build_dragon_flight(character.animated_model.skeleton, dragon_flap_frequency);
+		character.set_current_animation("Flight");
 	}
 
 	// Normalize all models to [-1, 1] range
@@ -97,11 +123,11 @@ void scene_structure::load_model(std::string const& name)
 			{"Cylinder", {1.674f, 0.242f, 3.456f},  {-0.486f, 0.183f, 0.204f},  3.905f},
 			{"Lola",     {0.725f, 0.818f, 3.400f},  {-0.399f, 0.197f, 0.167f},  3.479f},
 			{"Cthulhu",  {0.707f, -2.442f, 0.169f}, {-0.400f, -0.069f, -0.089f}, 2.631f},
-			{"Clown",    {0.475f, 0.505f, 2.761f},  {-0.362f, 0.084f, 0.037f},  2.881f},
-			{"Dragon",   {-2.919f, 0.601f, 0.637f}, {-0.048f, 0.009f, -0.582f}, 3.174f},
-			{"Girafe",   {2.318f, 0.671f, 1.742f},  {-0.742f, -0.059f, 0.005f}, 3.593f},
-			{"Snail",    {1.532f, -2.366f, 0.286f}, {-0.473f, -0.125f, -0.164f}, 3.040f},
-			{"Spot",     {-3.082f, 2.140f, 0.806f}, {0.409f, 0.494f, 0.209f},   3.905f},
+			{"Clown",    {0.790f, 0.575f, 3.170f},  {0.000f, 0.100f, 0.000f},   3.300f},
+			{"Dragon",   {2.300f, 1.300f, -2.000f},  {-0.048f, 0.009f, -0.582f}, 3.032f},
+			{"Girafe",   {1.035f, 0.351f, 3.551f},  {0.000f, 0.100f, 0.050f},  3.659f},
+			{"Snail",    {1.600f, 0.700f, 2.900f},  {0.100f, 0.000f, 0.000f},   3.300f},
+			{"Spot",     {2.490f, 0.850f, -2.590f}, {0.000f, 0.100f, -0.100f}, 3.600f},
 		};
 		bool found = false;
 		for (auto& d : presets) {
@@ -116,8 +142,10 @@ void scene_structure::load_model(std::string const& name)
 			camera_control.look_at({ 3.0f, 1.5f, 2.0f }, {0, 0, 0}, {0, 1, 0});
 	}
 
-	// Auto-enable GPU skinning for Cthulhu
-	use_gpu_skinning = (name == "Cthulhu");
+	// GPU skinning is enabled by default and the choice is kept between models,
+	// except for Cthulhu (high resolution meshes) where it is always enabled
+	if (name == "Cthulhu")
+		use_gpu_skinning = true;
 
 	reinitialize_after_model_change();
 }
@@ -149,6 +177,28 @@ void scene_structure::reinitialize_after_model_change()
 
 	character.timer.start();
 	character.timer.stop();
+	animation_running = false;
+}
+
+
+void scene_structure::update_dragon_flight_frequency()
+{
+	float const f = ds_params.frequency / (2 * Pi);
+	if (std::abs(f - dragon_flap_frequency) < 1e-3f)
+		return;
+	dragon_flap_frequency = f;
+
+	// Rebuild from the rest pose (normalized skeleton)
+	skeleton_structure rest = character.animated_model.skeleton;
+	rest.joint_matrix_local = skeleton_local_rest;
+	rest.update_joint_matrix_local_to_global();
+	character.animated_model.animation["Flight"] = build_dragon_flight(rest, f);
+
+	// The duration of the loop depends on f
+	if (character.current_animation_name == "Flight") {
+		character.set_current_animation("Flight");
+		character.timer.t_periodic = std::fmod(character.timer.t_periodic, character.timer.event_period);
+	}
 }
 
 
@@ -164,6 +214,9 @@ void scene_structure::initialize()
 
 	load_model("Cylinder");
 	ds_timer.start();
+
+	// Pinch zoom on touch screens (web version only)
+	touch_gestures_initialize(touch);
 }
 
 
@@ -188,6 +241,8 @@ void scene_structure::display_frame()
 	auto ta0 = clock::now();
 	// Reset local matrices so joints without animation channel don't accumulate
 	// the interactive deformation from one frame to the next
+	if (current_model_name == "Dragon")
+		update_dragon_flight_frequency();
 	character.animated_model.skeleton.joint_matrix_local = skeleton_local_rest;
 	character.animated_model.set_skeleton_from_animation(
 		character.current_animation_name, character.timer.t_periodic);
@@ -364,8 +419,15 @@ void scene_structure::mouse_move_event()
 	vec2 const& p1 = inputs.mouse.position.current;
 	bool const on_gui = inputs.mouse.on_gui;
 
+	// Two fingers on a touch screen: pinch zoom only (handled in idle_frame)
+	if (touch.multi_touch) {
+		picking.joint_hover = -1;
+		return;
+	}
+
 	if (camera_mode) {
 		// Mode caméra : comportement standard du framework
+		// (clic gauche = rotation, clic droit = zoom, Ctrl + clic = translation)
 		camera_control.action_mouse_move();
 		picking.joint_hover = -1;
 		return;
@@ -433,6 +495,21 @@ void scene_structure::mouse_click_event()
 		click_left, click_right, release);
 }
 
+void scene_structure::mouse_scroll_event()
+{
+	// Mouse wheel / two-finger trackpad scroll (and trackpad pinch on the web version) = zoom, in both modes
+	if (inputs.mouse.on_gui)
+		return;
+	float const scroll = std::max(-3.0f, std::min(3.0f, float(inputs.mouse.scroll)));
+	zoom_camera(std::exp(-0.08f * scroll));
+}
+
+void scene_structure::zoom_camera(float factor)
+{
+	auto& cam = camera_control.camera_model;
+	cam.distance_to_center = std::max(0.05f, std::min(50.0f, cam.distance_to_center * factor));
+}
+
 void scene_structure::keyboard_event()
 {
 	camera_control.action_keyboard();
@@ -441,9 +518,24 @@ void scene_structure::keyboard_event()
 	if (inputs.keyboard.last_action.key == GLFW_KEY_TAB && inputs.keyboard.last_action.action == GLFW_PRESS) {
 		camera_mode = !camera_mode;
 	}
+
+	// Shift+P → print the current camera as a preset line to paste in load_model
+	if (inputs.keyboard.last_action.key == GLFW_KEY_P && inputs.keyboard.last_action.action == GLFW_PRESS && inputs.keyboard.shift) {
+		auto const& cam = camera_control.camera_model;
+		vec3 const eye = cam.position();
+		vec3 const center = cam.center_of_rotation;
+		std::cout << std::fixed << std::setprecision(3)
+		          << "{\"" << current_model_name << "\", {" << eye.x << "f, " << eye.y << "f, " << eye.z << "f}, {"
+		          << center.x << "f, " << center.y << "f, " << center.z << "f}, " << cam.distance_to_center << "f}," << std::endl;
+	}
 }
 
 void scene_structure::idle_frame()
 {
 	camera_control.idle_frame();
+
+	// Pinch zoom accumulated by the touch callbacks
+	float const pinch = touch_gestures_consume_zoom(touch);
+	if (pinch != 1.0f)
+		zoom_camera(pinch);
 }
