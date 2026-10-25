@@ -70,8 +70,16 @@ skeleton_animation_structure build_sampled_animation(skeleton_structure const& s
                                                      std::function<pose_structure(float)> const& pose_at,
                                                      float duration, float dt);
 
-// Dragon: the wings flap at the given frequency (Hz, typically the frequency f of the oscillations,
-// so that the wing tips resonate), then glide (pause); the arms reach forward and come back
-// (the hands oscillate); finally the tail swings to one side, then to the other.
+// Dragon: the wings flap almost all the time at the given frequency (Hz, typically the frequency f of
+// the oscillations, so that the wing tips resonate), with a short glide at the end of the loop.
+// Meanwhile, the arms reach forward (one after the other, then both), the tail swings and lifts,
+// the head turns, nods and opens the mouth, and the legs kick forward (quick moves and pauses:
+// hands, tail, head and feet oscillate).
 // Expects the skeleton in its rest pose.
 skeleton_animation_structure build_dragon_flight(skeleton_structure const& skeleton, float flap_frequency);
+
+// Cthulhu: the head, the wings, the arms and the legs move together (quick moves and pauses): wings up,
+// arms forward, leg kicks and head nod, then the head shakes ("no") while the face tentacles swing.
+// Small angles: the large wings and long tentacles quickly self-intersect. Best seen with the per-vertex
+// bend weights (only the floppy parts deform: wing membranes, tentacles, spikes). Expects the rest pose.
+skeleton_animation_structure build_cthulhu_head_shake(skeleton_structure const& skeleton);

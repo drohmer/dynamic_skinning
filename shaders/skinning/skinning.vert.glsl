@@ -37,7 +37,7 @@ uniform int ds_active;
 uniform int hier_max;
 uniform int hier_tile_w;    // tiling: vertices per row in hier_weights_tex
 uniform float bend_factor;
-uniform int display_bend_weights;  // if 1, encode γ^bend as white→red color
+uniform int display_bend_weights;  // if 1, encode γ^bend as white→soft red color
 
 
 // ============================================================================
@@ -137,7 +137,7 @@ void main()
         int tr = gl_VertexID / hier_tile_w;
         int tc = (gl_VertexID % hier_tile_w) * hier_max;
         float wb = texelFetch(hier_weights_tex, ivec2(tc, tr), 0).z;
-        fragment.color = vec3(1.0, 1.0 - wb, 1.0 - wb);
+        fragment.color = mix(vec3(1.0), vec3(0.85, 0.45, 0.42), wb);  // white -> soft red
     } else {
         fragment.color = vertex_color;
     }

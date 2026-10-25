@@ -340,16 +340,17 @@ skeleton_animation_structure build_dragon_flight(skeleton_structure const& skele
 {
     // Tunable parameters
     float const angle_flap     = 15.0f * Pi / 180.0f;  // wing flapping amplitude (small: the oscillations resonate)
-    int   const N_flap         = 4;                    // number of wing beats
-    float const hold_glide     = 1.5f;                 // (s) pause after the flapping (wing tips oscillation)
-    float const angle_shoulder = 25.0f * Pi / 180.0f;  // arms reaching forward
-    float const angle_elbow    = 35.0f * Pi / 180.0f;
-    float const move_arm       = 0.3f;                 // (s) each arm motion
-    float const hold_arm       = 1.2f;                 // (s) pause after an arm motion (hands oscillation)
-    float const angle_tail     = 15.0f * Pi / 180.0f;  // tail swing, on each of the 3 first tail joints
-    float const move_tail      = 0.35f;                // (s) each tail motion
-    float const hold_tail      = 1.2f;                 // (s) pause after a tail motion
-    float const hold_end       = 1.0f;                 // (s) pause in the rest pose before looping
+    float const duration_min   = 12.0f;                // (s) minimal duration of the loop
+    float const glide          = 1.5f;                 // (s) glide (wings at rest) at the end of the loop
+    float const angle_shoulder = 35.0f * Pi / 180.0f;  // arms reaching forward
+    float const angle_elbow    = 45.0f * Pi / 180.0f;
+    float const angle_tail     = 18.0f * Pi / 180.0f;  // tail swing, on each of the 3 first tail joints
+    float const angle_tail_up  = 12.0f * Pi / 180.0f;  // tail lift, on each of the 3 first tail joints
+    float const angle_head     = 30.0f * Pi / 180.0f;  // head turn (toward the right side, facing the camera)
+    float const angle_nod      = 15.0f * Pi / 180.0f;  // head nod (down)
+    float const angle_jaw      = 20.0f * Pi / 180.0f;  // mouth opening
+    float const angle_hip      = 15.0f * Pi / 180.0f;  // legs kicking forward
+    float const angle_knee     = 20.0f * Pi / 180.0f;
 
     float const f = std::max(flap_frequency, 0.2f);
 
@@ -362,15 +363,19 @@ skeleton_animation_structure build_dragon_flight(skeleton_structure const& skele
     int const shoulder_R = joint("R_Arm18"), elbow_R = joint("R_Arm19"), hand_R = joint("R_Arm21");
     int const tail[3] = { joint("Tatil_1"), joint("Tatil_2"), joint("Tatil_3") };
     int const tail_tip = joint("Tatil_5");
+    int const neck = joint("Joint_AAA"), snout = joint("Head_Joint5");
+    int const jaw = joint("Jaw_Joints1"), jaw_tip = joint("joint104");
+    int const hip_L = joint("L_Leg1"), knee_L = joint("L_Leg2"), foot_L = joint("L_Leg4");
+    int const hip_R = joint("R_Leg1"), knee_R = joint("R_Leg2"), foot_R = joint("R_Leg4");
 
     // Body frame: vertical, forward (toward the head, horizontal), and left (L_ side)
     vec3 const up = {0, 1, 0};
-    vec3 forward = position(joint("Head_Joint1")) - position(0);
+    vec3 forward = position(snout) - position(0);
     forward.y = 0.0f;
     forward = normalize(forward);
     vec3 const left = normalize(position(wing_L) - position(wing_R));
 
-    // Wings flap around the forward axis, arms rotate around the lateral axis, the tail swings sideways
+    // Signs of the rotations, so that each motion goes in the intended direction
     float const sign_wing_L = rotation_sign(skeleton, wing_L, wing_L_tip, forward, up);
     float const sign_wing_R = rotation_sign(skeleton, wing_R, wing_R_tip, forward, up);
     float const sign_shoulder_L = rotation_sign(skeleton, shoulder_L, hand_L, left, forward);
@@ -378,48 +383,177 @@ skeleton_animation_structure build_dragon_flight(skeleton_structure const& skele
     float const sign_elbow_L = rotation_sign(skeleton, elbow_L, hand_L, left, forward);
     float const sign_elbow_R = rotation_sign(skeleton, elbow_R, hand_R, left, forward);
     float const sign_tail = rotation_sign(skeleton, tail[0], tail_tip, forward, left);
+    float const sign_tail_up = rotation_sign(skeleton, tail[0], tail_tip, left, -forward);
+    float const sign_head = rotation_sign(skeleton, neck, snout, up, -left);
+    float const sign_nod = rotation_sign(skeleton, neck, snout, left, -up);
+    float const sign_jaw = rotation_sign(skeleton, jaw, jaw_tip, left, -up);
+    float const sign_hip_L = rotation_sign(skeleton, hip_L, foot_L, left, forward);
+    float const sign_hip_R = rotation_sign(skeleton, hip_R, foot_R, left, forward);
+    float const sign_knee_L = rotation_sign(skeleton, knee_L, foot_L, left, -forward);
+    float const sign_knee_R = rotation_sign(skeleton, knee_R, foot_R, left, -forward);
 
-    // Timeline: flapping -> glide (pause) -> arms forward (pause) -> back (pause)
-    //           -> tail on one side (pause) -> other side (pause) -> rest (pause, loop)
-    float const t_flap = N_flap / f;
-    float const t_arm = t_flap + hold_glide;
-    std::vector<float> const arm_time  = { t_arm, t_arm + move_arm, t_arm + move_arm + hold_arm, t_arm + 2 * move_arm + hold_arm };
-    std::vector<float> const arm_value = { 0, 1, 1, 0 };
-    float const t_tail = arm_time.back() + hold_arm;
-    std::vector<float> tail_time = { t_tail };
-    tail_time.push_back(tail_time.back() + move_tail);
-    tail_time.push_back(tail_time.back() + hold_tail);
-    tail_time.push_back(tail_time.back() + 1.5f * move_tail);  // larger motion: from one side to the other
-    tail_time.push_back(tail_time.back() + hold_tail);
-    tail_time.push_back(tail_time.back() + move_tail);
-    std::vector<float> const tail_value = { 0, 1, 1, -1, -1, 0 };
-    float const duration = tail_time.back() + hold_end;
+    // The loop lasts an integer number of wing beats. The wings beat all the time, except during
+    // a short glide at the end of the loop (with a smooth envelope over half a beat on each side).
+    int const N_beats = int(std::ceil(duration_min * f));
+    float const duration = N_beats / f;
+    float const t_glide = (N_beats - std::max(1, int(std::round(glide * f)))) / f;
+
+    // Secondary motions, overlapping the flapping: quick moves (0.3-0.5 s) and short pauses,
+    // so that the hands, the tail and the head oscillate (curves of value -1..1 in time, see smooth_curve)
+    std::vector<float> const arm_L_time   = { 1.0f, 1.3f, 2.3f, 2.6f,  6.8f, 7.1f, 8.3f, 8.6f };
+    std::vector<float> const arm_L_value  = { 0,    1,    1,    0,     0,    1,    1,    0 };
+    std::vector<float> const arm_R_time   = { 2.2f, 2.5f, 3.5f, 3.8f,  6.8f, 7.1f, 8.3f, 8.6f };
+    std::vector<float> const arm_R_value  = { 0,    1,    1,    0,     0,    1,    1,    0 };
+    std::vector<float> const tail_time    = { 0.5f, 0.9f, 1.9f, 2.5f, 3.5f, 4.1f, 5.1f, 5.5f,  9.2f, 9.6f, 10.6f, 11.0f };
+    std::vector<float> const tail_value   = { 0,    1,    1,    -1,   -1,   1,    1,    0,     0,    -1,   -1,    0 };
+    std::vector<float> const tail_up_time = { 7.5f, 8.0f, 9.0f, 9.5f };
+    std::vector<float> const tail_up_value= { 0,    1,    1,    0 };
+    std::vector<float> const head_time    = { 4.0f, 4.4f, 5.6f, 6.0f, 7.0f, 7.4f };
+    std::vector<float> const head_value   = { 0,    1,    1,    -0.5f, -0.5f, 0 };
+    std::vector<float> const nod_time     = { 5.6f, 6.0f, 7.0f, 7.4f,  9.8f, 10.1f, 10.4f, 10.7f };
+    std::vector<float> const nod_value    = { 0,    1,    1,    0,     0,    1,     -0.5f, 0 };
+    std::vector<float> const jaw_time     = { 4.2f, 4.5f, 5.0f, 5.3f,  9.8f, 10.1f, 10.8f, 11.1f };
+    std::vector<float> const jaw_value    = { 0,    1,    1,    0,     0,    1,     1,     0 };
+    std::vector<float> const leg_L_time   = { 3.0f, 3.3f, 3.9f, 4.2f,  8.8f, 9.1f, 9.7f, 10.0f };
+    std::vector<float> const leg_L_value  = { 0,    1,    1,    0,     0,    1,    1,    0 };
+    std::vector<float> const leg_R_time   = { 5.2f, 5.5f, 6.1f, 6.4f,  9.3f, 9.6f, 10.2f, 10.5f };
+    std::vector<float> const leg_R_value  = { 0,    1,    1,    0,     0,    1,    1,     0 };
 
     pose_structure const rest = rest_pose(skeleton);
     auto pose_at = [&](float t) {
-        // Sinusoidal flapping at frequency f, with a smooth envelope over the first and last half beats
+        // Sinusoidal flapping at frequency f, with a smooth envelope at the start and before the glide
         // (starts and stops with zero velocity)
         float flap = 0.0f;
-        if (t < t_flap) {
-            float const u = std::min(1.0f, std::min(t, t_flap - t) * 2 * f);
+        if (t < t_glide) {
+            float const u = std::min(1.0f, std::min(t, t_glide - t) * 2 * f);
             flap = angle_flap * std::sin(2 * Pi * f * t) * u * u * (3.0f - 2.0f * u);
         }
-        float const arm = smooth_curve(t, arm_time, arm_value);
+        float const arm_L = smooth_curve(t, arm_L_time, arm_L_value);
+        float const arm_R = smooth_curve(t, arm_R_time, arm_R_value);
         float const swing = smooth_curve(t, tail_time, tail_value);
+        float const lift = smooth_curve(t, tail_up_time, tail_up_value);
+        float const head = smooth_curve(t, head_time, head_value);
+        float const nod = smooth_curve(t, nod_time, nod_value);
+        float const mouth = smooth_curve(t, jaw_time, jaw_value);
+        float const leg_L = smooth_curve(t, leg_L_time, leg_L_value);
+        float const leg_R = smooth_curve(t, leg_R_time, leg_R_value);
 
         pose_structure pose = rest;
         pose = rotate_joint(skeleton, pose, wing_L, forward, sign_wing_L * flap);
         pose = rotate_joint(skeleton, pose, wing_R, forward, sign_wing_R * flap);
-        pose = rotate_joint(skeleton, pose, shoulder_L, left, sign_shoulder_L * angle_shoulder * arm);
-        pose = rotate_joint(skeleton, pose, shoulder_R, left, sign_shoulder_R * angle_shoulder * arm);
-        pose = rotate_joint(skeleton, pose, elbow_L, left, sign_elbow_L * angle_elbow * arm);
-        pose = rotate_joint(skeleton, pose, elbow_R, left, sign_elbow_R * angle_elbow * arm);
-        for (int k = 0; k < 3; ++k)
+        pose = rotate_joint(skeleton, pose, shoulder_L, left, sign_shoulder_L * angle_shoulder * arm_L);
+        pose = rotate_joint(skeleton, pose, shoulder_R, left, sign_shoulder_R * angle_shoulder * arm_R);
+        pose = rotate_joint(skeleton, pose, elbow_L, left, sign_elbow_L * angle_elbow * arm_L);
+        pose = rotate_joint(skeleton, pose, elbow_R, left, sign_elbow_R * angle_elbow * arm_R);
+        for (int k = 0; k < 3; ++k) {
             pose = rotate_joint(skeleton, pose, tail[k], forward, sign_tail * angle_tail * swing);
+            pose = rotate_joint(skeleton, pose, tail[k], left, sign_tail_up * angle_tail_up * lift);
+        }
+        pose = rotate_joint(skeleton, pose, neck, up, sign_head * angle_head * head);
+        pose = rotate_joint(skeleton, pose, neck, left, sign_nod * angle_nod * nod);
+        pose = rotate_joint(skeleton, pose, jaw, left, sign_jaw * angle_jaw * mouth);
+        pose = rotate_joint(skeleton, pose, hip_L, left, sign_hip_L * angle_hip * leg_L);
+        pose = rotate_joint(skeleton, pose, hip_R, left, sign_hip_R * angle_hip * leg_R);
+        pose = rotate_joint(skeleton, pose, knee_L, left, sign_knee_L * angle_knee * leg_L);
+        pose = rotate_joint(skeleton, pose, knee_R, left, sign_knee_R * angle_knee * leg_R);
         return pose;
     };
 
     // Sampling: at least 20 samples per wing beat
     float const dt = std::min(1.0f / 60.0f, 1.0f / (20.0f * f));
     return build_sampled_animation(skeleton, pose_at, duration, dt);
+}
+
+
+skeleton_animation_structure build_cthulhu_head_shake(skeleton_structure const& skeleton)
+{
+    // Tunable parameters: small angles, the large wings and the long tentacles quickly self-intersect
+    float const angle_wing  =  6.0f * Pi / 180.0f;  // wings raised (one slow beat, no resonance)
+    float const angle_shake =  6.0f * Pi / 180.0f;  // head shake (left-right)
+    float const angle_tentacle = 12.0f * Pi / 180.0f;  // swing of the face tentacles (Bone_003)
+    float const angle_nod   =  8.0f * Pi / 180.0f;  // head nod (down)
+    float const angle_tail  =  8.0f * Pi / 180.0f;  // tail swing (sideways)
+    float const angle_arm   = 12.0f * Pi / 180.0f;  // arms reaching forward
+    float const angle_leg   = 10.0f * Pi / 180.0f;  // legs kicking forward
+
+    auto joint = [&](char const* name) { return find_joint(skeleton, name); };
+    auto position = [&](int j) { return skeleton.joint_matrix_global[j].get_block_translation(); };
+
+    int const wing_R = joint("Bone_026"), wing_R_tip = joint("FBone_036");
+    int const wing_L = joint("Bone_034"), wing_L_tip = joint("FBone_039");
+    int const neck = joint("Bone_002"), head = joint("Bone_003"), tentacle_tip = joint("FBone_040");
+    int const tail = joint("Bone_017"), tail_tip = joint("FBone_021");
+    int const arm_R = joint("Bone_008"), hand_R = joint("Bone_009");
+    int const arm_L = joint("Bone_044"), hand_L = joint("Bone_045");
+    int const leg_R = joint("Bone_012"), foot_R = joint("Bone_014");
+    int const leg_L = joint("Bone_050"), foot_L = joint("Bone_052");
+
+    // Body frame: vertical, forward (toward the head, horizontal), and lateral (toward the Bone_026 wing)
+    vec3 const up = {0, 1, 0};
+    vec3 forward = position(head) - position(0);
+    forward.y = 0.0f;
+    forward = normalize(forward);
+    vec3 const lateral = normalize(position(wing_R) - position(wing_L));
+
+    float const sign_wing_R = rotation_sign(skeleton, wing_R, wing_R_tip, forward, up);
+    float const sign_wing_L = rotation_sign(skeleton, wing_L, wing_L_tip, forward, up);
+    float const sign_shake = rotation_sign(skeleton, neck, head, up, lateral);
+    float const sign_nod = rotation_sign(skeleton, neck, head, lateral, -up);
+    float const sign_tentacle = rotation_sign(skeleton, head, tentacle_tip, up, lateral);
+    float const sign_tail = rotation_sign(skeleton, tail, tail_tip, up, lateral);
+    float const sign_arm_R = rotation_sign(skeleton, arm_R, hand_R, lateral, forward);
+    float const sign_arm_L = rotation_sign(skeleton, arm_L, hand_L, lateral, forward);
+    float const sign_leg_R = rotation_sign(skeleton, leg_R, foot_R, lateral, forward);
+    float const sign_leg_L = rotation_sign(skeleton, leg_L, foot_L, lateral, forward);
+
+    // Timeline (s): head, wings, arms and legs move together, with quick moves and pauses
+    // (curves of value -1..1, see smooth_curve). Two "gestures" per loop:
+    //   1) wings up, arms forward, left leg kick, head nod; then the head shakes ("no") while the
+    //      face tentacles swing to one side and back, the wings go slightly down and the right leg kicks;
+    //   2) everything together again: wings up, arms forward, both legs, nod and tentacles.
+    std::vector<float> const wing_time      = { 0.3f, 0.9f, 2.0f, 2.6f, 3.6f, 4.2f,  5.6f, 6.2f, 7.2f, 7.8f };
+    std::vector<float> const wing_value     = { 0, 1, 1, -0.5f, -0.5f, 0,  0, 1, 1, 0 };
+    std::vector<float> const arm_time       = { 0.3f, 0.7f, 1.8f, 2.3f,  5.6f, 6.0f, 7.0f, 7.4f };
+    std::vector<float> const arm_value      = { 0, 1, 1, 0,  0, 1, 1, 0 };
+    std::vector<float> const leg_L_time     = { 0.5f, 0.9f, 1.8f, 2.2f,  5.8f, 6.2f, 7.0f, 7.4f };
+    std::vector<float> const leg_L_value    = { 0, 1, 1, 0,  0, 1, 1, 0 };
+    std::vector<float> const leg_R_time     = { 2.6f, 3.0f, 3.9f, 4.3f,  5.8f, 6.2f, 7.0f, 7.4f };
+    std::vector<float> const leg_R_value    = { 0, 1, 1, 0,  0, 1, 1, 0 };
+    std::vector<float> const nod_time       = { 0.3f, 0.7f, 1.8f, 2.2f,  5.7f, 6.0f, 7.0f, 7.3f };
+    std::vector<float> const nod_value      = { 0, 1, 1, 0,  0, 1, 1, 0 };
+    std::vector<float> const shake_time     = { 3.0f, 3.3f, 3.8f, 4.1f };
+    std::vector<float> const shake_value    = { 0, 1, -1, 0 };
+    // (single moves of ~0.4 s followed by a pause: not faster than the oscillation of the tentacles)
+    std::vector<float> const tentacle_time  = { 3.0f, 3.4f, 4.2f, 4.6f,  6.0f, 6.4f, 7.0f, 7.4f };
+    std::vector<float> const tentacle_value = { 0, 1, 1, 0,  0, -1, -1, 0 };
+    std::vector<float> const tail_time      = { 1.0f, 1.4f, 2.4f, 3.0f, 4.0f, 4.4f };
+    std::vector<float> const tail_value     = { 0, 1, 1, -1, -1, 0 };
+    float const duration = 9.0f;
+
+    pose_structure const rest = rest_pose(skeleton);
+    auto pose_at = [&](float t) {
+        float const wing = smooth_curve(t, wing_time, wing_value);
+        float const shake = smooth_curve(t, shake_time, shake_value);
+        float const tentacle = smooth_curve(t, tentacle_time, tentacle_value);
+        float const nod = smooth_curve(t, nod_time, nod_value);
+        float const swing = smooth_curve(t, tail_time, tail_value);
+        float const arm = smooth_curve(t, arm_time, arm_value);
+        float const kick_L = smooth_curve(t, leg_L_time, leg_L_value);
+        float const kick_R = smooth_curve(t, leg_R_time, leg_R_value);
+
+        pose_structure pose = rest;
+        pose = rotate_joint(skeleton, pose, wing_R, forward, sign_wing_R * angle_wing * wing);
+        pose = rotate_joint(skeleton, pose, wing_L, forward, sign_wing_L * angle_wing * wing);
+        pose = rotate_joint(skeleton, pose, neck, up, sign_shake * angle_shake * shake);
+        pose = rotate_joint(skeleton, pose, neck, lateral, sign_nod * angle_nod * nod);
+        pose = rotate_joint(skeleton, pose, head, up, sign_tentacle * angle_tentacle * tentacle);
+        pose = rotate_joint(skeleton, pose, tail, up, sign_tail * angle_tail * swing);
+        pose = rotate_joint(skeleton, pose, arm_R, lateral, sign_arm_R * angle_arm * arm);
+        pose = rotate_joint(skeleton, pose, arm_L, lateral, sign_arm_L * angle_arm * arm);
+        pose = rotate_joint(skeleton, pose, leg_L, lateral, sign_leg_L * angle_leg * kick_L);
+        pose = rotate_joint(skeleton, pose, leg_R, lateral, sign_leg_R * angle_leg * kick_R);
+        return pose;
+    };
+
+    return build_sampled_animation(skeleton, pose_at, duration, 1.0f / 60.0f);
 }

@@ -57,9 +57,11 @@ L'écran principal ne montre qu'une petite barre d'outils ; tous les réglages s
 ### Barre d'outils
 
 - **Bone edit / Camera** — mode d'interaction (aussi avec la touche Tab), voir ci-dessous.
-- **Model** — choix du modèle : Cylinder, Girafe, Clown, Spot, Snail, Dragon, Lola, Cthulhu, puis les autres modèles.
+- **Model** — choix du modèle : Cylinder, Girafe, Clown, Spot, Snail, Dragon, Cthulhu, puis les autres modèles.
 - **Play / Pause** — lecture de l'animation pré-conçue du modèle.
 - **Dynamic skinning** — active / désactive les déformations liées à la vitesse.
+- **Skeleton** — affiche / masque rapidement le squelette (os et joints).
+- **Weights** (Cthulhu) — colore les poids de flexion par sommet (blanc : rigide, rouge doux : souple ; uniquement pour le Cthulhu, les autres modèles ayant des poids uniformes), activé par défaut pour bien voir les parties qui se déforment (tentacules, pointes, membranes).
 - **Frequency f, Damping tau, Amplitude A, Drag D** (visibles quand le dynamic skinning est actif) — paramètres principaux avec les notations du papier : fréquence f en Hz (stockée comme ω = 2πf), amortissement τ en secondes (stocké comme `attenuation` = 1/τ), amplitude A des oscillations, et poids D du drag. La vitesse angulaire filtrée vaut `D·Ω + A·(Ω ∗ κ')` : D règle le retard pendant le mouvement (velocity skinning, proportionnel à la vitesse), A les oscillations (déclenchées par les changements de vitesse) ; les deux sont indépendants.
 - **Settings** — ouvre / ferme la fenêtre des réglages avancés.
 
@@ -76,13 +78,13 @@ L'écran principal ne montre qu'une petite barre d'outils ; tous les réglages s
 
 Le pinch du trackpad n'est pas transmis par GLFW sur desktop : on y zoome avec le scroll à deux doigts. En version web, le pinch du trackpad arrive comme une molette, et les gestes tactiles à deux doigts sont gérés par `src/interaction/touch_gestures.cpp`.
 
-Raccourcis : Tab (changement de mode), Shift + P (affiche la caméra courante sous forme de ligne de preset, à coller dans `load_model`), Shift + F (plein écran).
+Raccourcis : Tab (changement de mode), Shift + P (affiche la caméra courante sous forme de ligne de preset — œil, centre, distance et vecteur « haut », pour conserver aussi l'inclinaison de la caméra — à coller dans `load_model`), Shift + F (plein écran).
 
 ### Fenêtre Settings
 
 **Window** — Plein écran, échelle de la GUI, limitation des FPS, vsync.
 
-**Cthulhu** (si chargé) — Choix de la résolution (150K–750K sommets) et activation des poids de flexion par sommet (γ^bend) avec visualisation blanc→rouge.
+**Cthulhu** (si chargé) — Choix de la résolution (150K–750K sommets) et activation des poids de flexion par sommet (γ^bend, **activés par défaut** : seules les parties souples se déforment — membranes des ailes, tentacules, pointes) avec visualisation blanc→rouge.
 
 **Animation** — Sélection de l'animation, position du timer, vitesse de lecture.
 
@@ -96,7 +98,7 @@ Raccourcis : Tab (changement de mode), Shift + P (affiche la caméra courante so
 
 ### Animations pré-conçues
 
-« Bending » pour le cylindre (flexion de ±90°, transitions lissées (ease-in-out) de 0,7 s, γ^bend = 0.5 comme dans le code original), « Neck swing » pour la girafe (partant de la pose droite, le cou part vers la gauche, pause, tourne vers la droite, pause, puis revient droit ; transitions lissées (ease-in-out), comme dans le teaser du papier), « Swing » pour le clown (le corps pivote sur le ressort vers la gauche puis vers la droite, comme dans la figure du papier, puis twist de 50° autour du ressort d'un côté, retour, puis de l'autre côté, pour faire osciller les mains), « Head nod & twist » pour Spot (la tête oscille de haut en bas, pause, puis twist de chaque côté pour faire osciller les oreilles), « Head up & down » pour l'escargot (rotation du bone parent du joint 10 : la tête monte légèrement avec un peu de twist, pause, revient, puis descend avec un twist opposé, pour faire osciller les yeux sans qu'ils rentrent dans la carapace ; la queue (parent du joint 9) se lève avec la tête puis se balance sur le côté quand la tête descend), « Flight » pour le dragon (4 battements d'ailes de ±15° à la **même fréquence f que les oscillations**, pour les faire entrer en résonance, puis plané (pause) ; les bras se tendent vers l'avant puis reviennent, pour faire osciller les mains ; enfin la queue se balance d'un côté puis de l'autre). L'animation du dragon est reconstruite automatiquement quand on change f (la durée de la boucle en dépend) ; Time scale ≠ 1 désynchronise les battements de la fréquence f. Toutes ces animations sont construites dans `src/loaders/procedural_animations.cpp`.
+« Bending » pour le cylindre (flexion de ±90°, transitions lissées (ease-in-out) de 0,7 s, γ^bend = 0.5 comme dans le code original), « Neck swing » pour la girafe (partant de la pose droite, le cou part vers la gauche, pause, tourne vers la droite, pause, puis revient droit ; transitions lissées (ease-in-out), comme dans le teaser du papier), « Swing » pour le clown (le corps pivote sur le ressort vers la gauche puis vers la droite, comme dans la figure du papier, puis twist de 50° autour du ressort d'un côté, retour, puis de l'autre côté, pour faire osciller les mains), « Head nod & twist » pour Spot (la tête oscille de haut en bas, pause, puis twist de chaque côté pour faire osciller les oreilles), « Head up & down » pour l'escargot (rotation du bone parent du joint 10 : la tête monte légèrement avec un peu de twist, pause, revient, puis descend avec un twist opposé, pour faire osciller les yeux sans qu'ils rentrent dans la carapace ; la queue (parent du joint 9) se lève avec la tête puis se balance sur le côté quand la tête descend), « Flight » pour le dragon (les ailes battent presque tout le temps, ±15° à la **même fréquence f que les oscillations** pour les faire entrer en résonance, avec un court plané en fin de boucle ; pendant ce temps, les bras se tendent vers l'avant l'un après l'autre puis ensemble, la queue se balance et se soulève, la tête tourne, hoche et ouvre la gueule, et les jambes donnent de petits coups vers l'avant, avec des mouvements rapides et des pauses pour faire osciller mains, queue, tête et pieds ; vue de côté, légèrement de face). L'animation du dragon est reconstruite automatiquement quand on change f (la durée de la boucle en dépend) ; Time scale ≠ 1 désynchronise les battements de la fréquence f. « Head shake » pour le Cthulhu (mouvements volontairement **petits**, car les grandes ailes et les tentacules s'auto-intersectent vite ; la tête, les ailes, les bras et les jambes bougent ensemble : ailes levées de 6°, bras vers l'avant (12°), coups de jambe (10°), hochement de tête (8°), puis la tête fait « non » (6°) pendant que l'articulation des tentacules du visage (Bone_003) se tourne de 12° d'un côté puis revient (mouvements de 0,4 s, pas plus rapides que l'oscillation des tentacules) ; la queue suit ; un battement d'ailes à la fréquence f a été écarté car la résonance déforme trop les membranes ; vue rapprochée par en dessous, et A = 0.08, D = 0.3 au chargement du Cthulhu, les autres modèles reprenant les valeurs par défaut). Toutes ces animations sont construites dans `src/loaders/procedural_animations.cpp`.
 
 
 ## Variables principales du Dynamic Skinning
@@ -139,5 +141,5 @@ Le facteur de flexion effectif est `0.4 × bend_magnitude` (équivalent du « Dr
   - `single_color/` — Shader couleur uniforme (squelette)
   - `skinning/` — Shaders GPU skinning (LBS + bend deformer dans le vertex shader, Phong dans le fragment shader)
 - **`cgp/`** — Framework graphique (ne pas modifier)
-- **`assets/`** — Données des modèles (Lola avec animations, Cthulhu en plusieurs résolutions, modèles legacy)
+- **`assets/`** — Données des modèles (Cthulhu en plusieurs résolutions, modèles legacy)
 - Ancien code GPU de référence : déplacé hors du projet, dans `../sources-gpu/`

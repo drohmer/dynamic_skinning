@@ -61,20 +61,6 @@ void scene_structure::load_model(std::string const& name)
 	if (name == "Cylinder") {
 		character = load_cylinder_bending();
 	}
-	else if (name == "Lola") {
-		filename_loader_structure loader_param;
-		loader_param.set_skeleton(project::path+"assets/lola/skeleton/");
-		loader_param.add_rigged_mesh("body", project::path+"assets/lola/mesh-lola/", project::path+"assets/lola/mesh-lola/texture.jpg");
-		loader_param.add_animation("Dance1", project::path+"assets/lola/animation/dance_1/");
-		loader_param.add_animation("Dance2", project::path+"assets/lola/animation/dance_2/");
-		loader_param.add_animation("Dance3", project::path+"assets/lola/animation/dance_3/");
-		loader_param.add_animation("Dance4", project::path+"assets/lola/animation/dance_4/");
-		loader_param.add_animation("Idle", project::path+"assets/lola/animation/idle/");
-		loader_param.add_animation("Walk", project::path+"assets/lola/animation/walk/");
-		loader_param.add_animation("Walk2", project::path+"assets/lola/animation/walk_style/");
-		character = character_structure();
-		character.load_and_initialize(loader_param, affine_rts().set_scaling(0.01f));
-	}
 	else if (name == "Cthulhu") {
 		std::string resolution = cthulhu_resolutions[cthulhu_resolution_index];
 		character = load_cthulhu_character(project::path + "assets/cthulhu/",
@@ -109,9 +95,13 @@ void scene_structure::load_model(std::string const& name)
 	}
 	if (name == "Dragon") {
 		// The wings beat at the frequency f of the oscillations (resonance of the wing tips)
-		dragon_flap_frequency = ds_params.frequency / (2 * Pi);
-		character.animated_model.animation["Flight"] = build_dragon_flight(character.animated_model.skeleton, dragon_flap_frequency);
+		flap_frequency = ds_params.frequency / (2 * Pi);
+		character.animated_model.animation["Flight"] = build_dragon_flight(character.animated_model.skeleton, flap_frequency);
 		character.set_current_animation("Flight");
+	}
+	if (name == "Cthulhu") {
+		character.animated_model.animation["Head shake"] = build_cthulhu_head_shake(character.animated_model.skeleton);
+		character.set_current_animation("Head shake");
 	}
 
 	// Normalize all models to [-1, 1] range
@@ -119,20 +109,20 @@ void scene_structure::load_model(std::string const& name)
 
 	// Camera: hard-coded presets per model
 	{
-		struct { const char* name; vec3 eye; vec3 center; float dist; } presets[] = {
-			{"Cylinder", {1.674f, 0.242f, 3.456f},  {-0.486f, 0.183f, 0.204f},  3.905f},
-			{"Lola",     {0.725f, 0.818f, 3.400f},  {-0.399f, 0.197f, 0.167f},  3.479f},
-			{"Cthulhu",  {0.707f, -2.442f, 0.169f}, {-0.400f, -0.069f, -0.089f}, 2.631f},
-			{"Clown",    {0.790f, 0.575f, 3.170f},  {0.000f, 0.100f, 0.000f},   3.300f},
-			{"Dragon",   {2.300f, 1.300f, -2.000f},  {-0.048f, 0.009f, -0.582f}, 3.032f},
-			{"Girafe",   {1.035f, 0.351f, 3.551f},  {0.000f, 0.100f, 0.050f},  3.659f},
-			{"Snail",    {1.600f, 0.700f, 2.900f},  {0.100f, 0.000f, 0.000f},   3.300f},
-			{"Spot",     {2.490f, 0.850f, -2.590f}, {0.000f, 0.100f, -0.100f}, 3.600f},
+		// eye, center, distance, and up vector of the camera (Shift+P prints the current camera as such a line)
+		struct { const char* name; vec3 eye; vec3 center; float dist; vec3 up; } presets[] = {
+			{"Cylinder", {1.674f, 0.242f, 3.456f},  {-0.486f, 0.183f, 0.204f},  3.905f, {0, 1, 0}},
+			{"Cthulhu",  {0.508f, -0.751f, 0.067f}, {0.000f, -0.060f, 0.080f}, 0.857f, {-0.118f, -0.106f, 0.987f}},
+			{"Clown",    {0.790f, 0.575f, 3.170f},  {0.000f, 0.100f, 0.000f},   3.300f, {0, 1, 0}},
+			{"Dragon",   {-2.700f, 0.500f, 0.600f},  {0.000f, 0.100f, 0.000f},   2.600f, {0, 1, 0}},
+			{"Girafe",   {1.035f, 0.351f, 3.551f},  {0.000f, 0.100f, 0.050f},  3.659f, {0, 1, 0}},
+			{"Snail",    {1.600f, 0.700f, 2.900f},  {0.100f, 0.000f, 0.000f},   3.300f, {0, 1, 0}},
+			{"Spot",     {2.490f, 0.850f, -2.590f}, {0.000f, 0.100f, -0.100f}, 3.600f, {0, 1, 0}},
 		};
 		bool found = false;
 		for (auto& d : presets) {
 			if (name == d.name) {
-				camera_control.look_at(d.eye, d.center, {0, 1, 0});
+				camera_control.look_at(d.eye, d.center, d.up);
 				camera_control.camera_model.distance_to_center = d.dist;
 				found = true;
 				break;
@@ -146,6 +136,11 @@ void scene_structure::load_model(std::string const& name)
 	// except for Cthulhu (high resolution meshes) where it is always enabled
 	if (name == "Cthulhu")
 		use_gpu_skinning = true;
+
+	// Amplitude A and drag D: default values, smaller for Cthulhu (large wings and long tentacles)
+	dynamic_skinning_parameters const ds_default;
+	ds_params.amplitude = (name == "Cthulhu") ? 0.08f : ds_default.amplitude;
+	ds_params.drag      = (name == "Cthulhu") ? 0.30f : ds_default.drag;
 
 	reinitialize_after_model_change();
 }
@@ -181,12 +176,12 @@ void scene_structure::reinitialize_after_model_change()
 }
 
 
-void scene_structure::update_dragon_flight_frequency()
+void scene_structure::update_flight_frequency()
 {
 	float const f = ds_params.frequency / (2 * Pi);
-	if (std::abs(f - dragon_flap_frequency) < 1e-3f)
+	if (std::abs(f - flap_frequency) < 1e-3f)
 		return;
-	dragon_flap_frequency = f;
+	flap_frequency = f;
 
 	// Rebuild from the rest pose (normalized skeleton)
 	skeleton_structure rest = character.animated_model.skeleton;
@@ -199,6 +194,13 @@ void scene_structure::update_dragon_flight_frequency()
 		character.set_current_animation("Flight");
 		character.timer.t_periodic = std::fmod(character.timer.t_periodic, character.timer.event_period);
 	}
+}
+
+
+bool scene_structure::show_bend_weights() const
+{
+	// Only for the Cthulhu with its per-vertex bend weights (the other models have uniform weights)
+	return display_bend_weights && current_model_name == "Cthulhu" && cthulhu_use_bend_weights;
 }
 
 
@@ -242,7 +244,7 @@ void scene_structure::display_frame()
 	// Reset local matrices so joints without animation channel don't accumulate
 	// the interactive deformation from one frame to the next
 	if (current_model_name == "Dragon")
-		update_dragon_flight_frequency();
+		update_flight_frequency();
 	character.animated_model.skeleton.joint_matrix_local = skeleton_local_rest;
 	character.animated_model.set_skeleton_from_animation(
 		character.current_animation_name, character.timer.t_periodic);
@@ -302,7 +304,7 @@ void scene_structure::display_frame()
 		if (gui.display_surface) {
 			bool show_texture = gui.display_texture && (weight_display == weight_display_mode::none);
 			drawable.material.texture_settings.active = show_texture;
-			gpu_skinning_draw(gpu_state, drawable, environment, ds_params, display_bend_weights);
+			gpu_skinning_draw(gpu_state, drawable, environment, ds_params, show_bend_weights());
 		}
 	}
 	else {
@@ -339,12 +341,12 @@ void scene_structure::display_frame()
 			drawable.vbo_normal.update(rigged_mesh.mesh_deformed.normal);
 
 			// Encode bend weights as color: white (w=0) → red (w=1)
-			if (display_bend_weights && ds_state.weight_bend.size() > 0) {
+			if (show_bend_weights() && ds_state.weight_bend.size() > 0) {
 				int N = rigged_mesh.mesh_deformed.position.size();
 				numarray<vec3> colors(N);
 				for (int i = 0; i < N; ++i) {
 					float w = ds_state.weight_bend[i];
-					colors[i] = {1.0f, 1.0f - w, 1.0f - w};  // white→red
+					colors[i] = (1 - w) * vec3{1, 1, 1} + w * vec3{0.85f, 0.45f, 0.42f};  // white -> soft red
 				}
 				drawable.vbo_color.update(colors);
 			}
@@ -524,9 +526,11 @@ void scene_structure::keyboard_event()
 		auto const& cam = camera_control.camera_model;
 		vec3 const eye = cam.position();
 		vec3 const center = cam.center_of_rotation;
+		vec3 const up = cam.orientation() * vec3{0, 1, 0};
 		std::cout << std::fixed << std::setprecision(3)
 		          << "{\"" << current_model_name << "\", {" << eye.x << "f, " << eye.y << "f, " << eye.z << "f}, {"
-		          << center.x << "f, " << center.y << "f, " << center.z << "f}, " << cam.distance_to_center << "f}," << std::endl;
+		          << center.x << "f, " << center.y << "f, " << center.z << "f}, " << cam.distance_to_center << "f, {"
+		          << up.x << "f, " << up.y << "f, " << up.z << "f}}," << std::endl;
 	}
 }
 

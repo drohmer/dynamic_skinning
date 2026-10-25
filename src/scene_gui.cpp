@@ -37,12 +37,15 @@ void scene_structure::display_gui()
 		ImGui::SetTooltip("Left drag: rotation\nRight drag / scroll / pinch: zoom\nCtrl + left drag: translation");
 	ImGui::SameLine();
 	ImGui::TextDisabled("(Tab)");
+	ImGui::SameLine();
+	if (toggle_button("Settings", show_settings))
+		show_settings = !show_settings;
 
 	// ---- Model ----
 	ImGui::SetNextItemWidth(160);
 	if (ImGui::BeginCombo("Model", current_model_name.c_str())) {
 		// Display order: models with a pre-designed animation first, then the other legacy models
-		std::vector<std::string> model_names = {"Cylinder", "Girafe", "Clown", "Spot", "Snail", "Dragon", "Lola", "Cthulhu"};
+		std::vector<std::string> model_names = {"Cylinder", "Girafe", "Clown", "Spot", "Snail", "Dragon", "Cthulhu"};
 		for (auto const& m : get_legacy_models())
 			if (std::find(model_names.begin(), model_names.end(), m.name) == model_names.end())
 				model_names.push_back(m.name);
@@ -58,17 +61,29 @@ void scene_structure::display_gui()
 		ImGui::EndCombo();
 	}
 
-	// ---- Animation and dynamic skinning ----
+	// ---- Animation and skeleton display ----
 	if (ImGui::Button(animation_running ? "Pause" : "Play", ImVec2(60, 0))) {
 		animation_running = !animation_running;
 		if (animation_running) character.timer.start();
 		else                   character.timer.stop();
 	}
 	ImGui::SameLine();
+	// Quick toggle of the skeleton display (bones and joints)
+	bool show_skeleton = gui.display_skeleton_bones || gui.display_skeleton_joints;
+	if (ImGui::Checkbox("Skeleton", &show_skeleton)) {
+		gui.display_skeleton_bones = show_skeleton;
+		gui.display_skeleton_joints = show_skeleton;
+	}
+	// Quick toggle of the bend weights coloring (models with per-vertex bend weights)
+	if (current_model_name == "Cthulhu" && cthulhu_use_bend_weights) {
+		ImGui::SameLine();
+		ImGui::Checkbox("Weights", &display_bend_weights);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Color the per-vertex bend weights (white: rigid, red: floppy)");
+	}
+
+	// ---- Dynamic skinning and its main parameters ----
 	ImGui::Checkbox("Dynamic skinning", &ds_params.active);
-	ImGui::SameLine();
-	if (toggle_button("Settings", show_settings))
-		show_settings = !show_settings;
 
 	// ---- Main oscillation parameters (with the notations of the paper) ----
 	if (ds_params.active) {

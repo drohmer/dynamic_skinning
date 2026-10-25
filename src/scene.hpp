@@ -75,8 +75,8 @@ struct scene_structure : cgp::scene_inputs_generic {
 
 	// Cthulhu-specific options
 	int cthulhu_resolution_index = 0;  // index into cthulhu_resolutions[]
-	bool cthulhu_use_bend_weights = false;
-	bool display_bend_weights = false;
+	bool cthulhu_use_bend_weights = true;  // floppy parts only (wing membranes, tentacles)
+	bool display_bend_weights = true;  // color the floppy parts (white -> red)
 
 	// ****************************** //
 	// Dynamic Skinning & Joint Picking
@@ -86,7 +86,7 @@ struct scene_structure : cgp::scene_inputs_generic {
 	joint_picking_state picking;
 	cgp::numarray<cgp::mat4> interactive_deformation;
 	cgp::numarray<cgp::mat4> skeleton_local_rest;  // local matrices restored each frame before animation
-	float dragon_flap_frequency = 0.0f;  // (Hz) wing beat frequency of the current dragon "Flight" animation
+	float flap_frequency = 0.0f;  // (Hz) wing beat frequency of the current dragon "Flight" animation
 	mesh_drawable sphere_picking;
 	bool camera_mode = false;  // false = bone-edit mode, true = camera mode
 	touch_gesture_state touch;  // pinch zoom on touch screens (web version)
@@ -140,7 +140,9 @@ struct scene_structure : cgp::scene_inputs_generic {
 	// Reload dynamic skinning state after model change
 	void reinitialize_after_model_change();
 	// Dragon: rebuild the "Flight" animation when the frequency f of the oscillations has changed
-	void update_dragon_flight_frequency();
+	void update_flight_frequency();
+	// True when the per-vertex bend weights are displayed as colors (Cthulhu only)
+	bool show_bend_weights() const;
 	// Zoom: multiply the camera distance to its center by factor
 	void zoom_camera(float factor);
 	// Load a model by name
