@@ -116,7 +116,7 @@ void scene_structure::display_gui()
 			ds_params.attenuation = 1.0f / tau;
 
 		ImGui::SetNextItemWidth(160);
-		ImGui::SliderFloat("Amplitude A", &ds_params.amplitude, 0.0f, 2.0f, "%.2f");
+		ImGui::SliderFloat("Amplitude A", &ds_params.amplitude, 0.0f, 5.0f, "%.2f");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Oscillations (driven by the changes of velocity)");
 

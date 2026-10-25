@@ -13,6 +13,7 @@
 //                     e.g. "0,0.5,1.0" (default: "0")
 //   DS_CAPTURE_DS     0 to disable dynamic skinning (default: unchanged)
 //   DS_CAPTURE_DELAY  0/1 to disable/enable the delayed LBS (default: model default)
+//   DS_CAPTURE_FPS    frame rate imposed without vsync, e.g. 30 or 120 (default: unchanged)
 //   DS_CAPTURE_GPU    0/1 to force the CPU/GPU skinning path (default: model default)
 //   DS_CAPTURE_EYE    "x,y,z" camera position, looking at the preset center (default: model preset)
 //   DS_CAPTURE_GUI    1 to include the GUI in the frames, 2 to also open the settings window (default: 0)
@@ -25,6 +26,7 @@ struct frame_capture_structure {
     std::vector<float> times;
     int dynamic_skinning = -1;   // -1: unchanged, 0: off, 1: on
     int delay = -1;              // -1: unchanged, 0: off, 1: on
+    float fps = 0;               // 0: unchanged
     int gpu = -1;                // -1: unchanged, 0: CPU path, 1: GPU path
     bool has_eye = false;
     cgp::vec3 eye;

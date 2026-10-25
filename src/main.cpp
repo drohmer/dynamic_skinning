@@ -75,6 +75,12 @@ int main(int, char* argv[])
 			scene.ds_params.active = (capture.dynamic_skinning == 1);
 		if (capture.delay >= 0)
 			scene.ds_params.delay_active = (capture.delay == 1);
+		if (capture.fps > 0) {
+			project::vsync = false;
+			glfwSwapInterval(0);
+			project::fps_limiting = true;
+			project::fps_max = capture.fps;
+		}
 		scene.character.timer.start();
 		scene.animation_running = true;
 		scene.show_settings = (capture.gui == 2);

@@ -28,6 +28,10 @@ void frame_capture_structure::initialize_from_environment()
     if (delay_env != nullptr)
         delay = std::atoi(delay_env);
 
+    char const* fps_env = std::getenv("DS_CAPTURE_FPS");
+    if (fps_env != nullptr)
+        fps = float(std::atof(fps_env));
+
     char const* gpu_env = std::getenv("DS_CAPTURE_GPU");
     if (gpu_env != nullptr)
         gpu = std::atoi(gpu_env);

@@ -152,12 +152,13 @@ void scene_structure::load_model(std::string const& name)
 	// Amplitude A and drag D: default values, smaller for Cthulhu (large wings and long tentacles),
 	// larger drag for the Clown with local centers (only the extremities are deformed)
 	dynamic_skinning_parameters const ds_default;
-	ds_params.amplitude = (name == "Cthulhu") ? 0.08f : ds_default.amplitude;
+	ds_params.amplitude = (name == "Cthulhu") ? 0.47f : ds_default.amplitude;
 	ds_params.drag      = (name == "Cthulhu") ? 0.30f : ds_default.drag;
 	if (name == "Clown" && clown_flexible_origins)
 		ds_params.drag = 1.0f;
 
-	// Delayed LBS: shown with the train (faster propagation), off for the other models
+	// Delayed LBS: shown alone with the train (without dynamic skinning), off for the other models
+	ds_params.active = (name != "Train");
 	ds_params.delay_active = (name == "Train");
 	ds_params.delay_speed = (name == "Train") ? 3.0f : ds_default.delay_speed;
 

@@ -9,31 +9,23 @@
 // Named constants for dynamic skinning
 // ============================================================================
 
-constexpr float DS_FRAME_DT           = 0.017f;   // Assumed frame delta time (~60 fps)
 constexpr float DS_BEND_COUPLING      = 0.4f;     // Coupling coefficient (Appendix E §E.2)
-constexpr int   DS_N_INTEGRAL         = 300;       // Number of convolution samples
-constexpr float DS_AMPLITUDE_SCALING  = 10.0f;     // Empirical amplitude divisor (Appendix E §E.2)
+constexpr int   DS_N_INTEGRAL         = 300;      // Number of convolution samples (5 s of history at DS_HISTORY_DT)
 
 
 // ============================================================================
-// Oscillation kernel and derivative (eq. 11, 14-15)
+// Oscillation kernel (eq. 11)
 // ============================================================================
 
-// Oscillation kernel κ (eq. 11):
-//   κ(t) = exp(-t/τ) sin(ω t)   with ω = params.frequency, 1/τ = params.attenuation
+// Oscillation kernel κ (eq. 11), at the time t = k Δt of the k-th sample of the history:
+//   κ(t) = A exp(-t/τ) sin(ω t)   with A = params.amplitude, ω = params.frequency, 1/τ = params.attenuation
 // The frequency_slope extension allows a time-varying frequency (Appendix C, κ₁).
 inline float oscillating_kernel(int k, dynamic_skinning_parameters const& params)
 {
-    float t = k * DS_FRAME_DT;
+    float t = k * DS_HISTORY_DT;
     float df = t * params.frequency_slope;
     float phase = (params.frequency + df) * t;
-    return std::exp(-params.attenuation * t) * std::sin(phase);
-}
-
-// Finite-difference kernel derivative: dκ/dt ≈ (κ(t) - κ(t-Δt)) / Δt
-inline float kernel_derivative(int k, dynamic_skinning_parameters const& params)
-{
-    return (oscillating_kernel(k, params) - oscillating_kernel(k - 1, params)) / DS_FRAME_DT;
+    return params.amplitude * std::exp(-params.attenuation * t) * std::sin(phase);
 }
 
 
@@ -43,7 +35,7 @@ inline float kernel_derivative(int k, dynamic_skinning_parameters const& params)
 //
 // For each joint j:
 //   1. Extract local rotation as quaternion, feed to angular velocity tracker
-//   2. Convolve velocity history with oscillation kernel derivative (eq. 14-15)
+//   2. Convolve the history of the changes of velocity with the oscillation kernel (eq. 14-15)
 //   3. Transform from local to global coordinates via parent rotation
 //
 // Result is written to filtered_velocity[joint].
@@ -74,15 +66,17 @@ inline void compute_filtered_angular_velocities(
         // Drag term (velocity skinning), weighted by D
         cgp::vec3 angular_velocity = params.drag * velocity_history[velocity_history.size() - 1];
 
-        if (static_cast<int>(velocity_history.size()) > DS_N_INTEGRAL) {
+        // Oscillation term (numerical form of eq. 15):  Σ_k κ(k Δt) (Ω((i-k) Δt) - Ω((i-k-1) Δt))
+        //   (integration by parts of ∫ κ'(u) Ω(t-u) du; causal: no contribution of κ for t < 0)
+        int const N_history = velocity_history.size();
+        if (N_history > DS_N_INTEGRAL) {
             cgp::vec3 v_integral = {0, 0, 0};
             for (int k = 0; k < DS_N_INTEGRAL; ++k) {
-                cgp::vec3 v = velocity_history[velocity_history.size() - 1 - k];
-                v_integral += v * kernel_derivative(k, params);
+                cgp::vec3 const delta_v = velocity_history[N_history - 1 - k] - velocity_history[N_history - 2 - k];
+                v_integral += oscillating_kernel(k, params) * delta_v;
             }
-            // Oscillation term, weighted by A:  D * Omega + A * (Omega * kappa')
-            float A = params.amplitude / DS_AMPLITUDE_SCALING;
-            angular_velocity = angular_velocity + A * v_integral;
+            // F(Omega) = D * Omega + Σ κ ΔOmega
+            angular_velocity = angular_velocity + v_integral;
         }
 
         if (joint != 0) {

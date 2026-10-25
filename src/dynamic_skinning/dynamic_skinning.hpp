@@ -11,7 +11,7 @@
 // Parameters controlling the dynamic skinning effect
 struct dynamic_skinning_parameters {
     float frequency       = 2.0f * 3.14159f * 1.5f;
-    float amplitude       = 0.15f;
+    float amplitude       = 0.88f;  // amplitude A of the oscillation kernel κ (eq. 11)
     float drag            = 0.5f;   // weight D of the velocity (drag) term, independent of the oscillation amplitude
     float attenuation     = 1.5f;
     float frequency_slope = 0.0f;

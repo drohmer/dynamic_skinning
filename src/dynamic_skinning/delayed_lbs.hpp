@@ -5,18 +5,28 @@
 #include "animated_character/animated_model/animated_model.hpp"
 
 
-// Delayed Linear Blend Skinning (dLBS, paper Sec. "Time Delay Filter")
+// Delayed Linear Blend Skinning (dLBS, paper Sec. 4 "Time Delay Filter", Sec. "Delayed Linear Blend Skinning")
 //
-//   p_i^dLBS(t) = Σ_j α_ij T_j^d(t) p_i^0,   T_j^d(t) = Π_{k ∈ root..j} L_k(t - (d_i - d_k) / c)  B_j^-1
+//   Paper:  p_i^dLBS = Σ_j α_ij T_j^{delay/i}(t) p_i^0
+//           T_j^{delay/i}(t) = Π_{j' ∈ A(j)} T_j'^local(t - d_ij' / c)
+//   where A(j) are the ancestors of j (from the root to j), d_ij' the distance from the vertex i to the
+//   joint j' measured along the skeleton, and c the propagation speed.
 //
-// d_i is the distance from the vertex to the root of the skeleton, measured along the skeleton
-// (closest point on the bones, then cumulated bone lengths up to the root), d_k the same distance for
-// the joint k, and c is the propagation speed. As in the paper, each local transformation L_k is delayed
-// separately: the motion of a joint starts at this joint and propagates towards the extremities (e.g. the
-// bumps of the engine of the train going to the last wagon, or a rotated neck of the giraffe going to the head).
+//   Here, d_ij' = d_i - d_j', with
+//     d_i  = distance from the vertex i to the root along the skeleton (per vertex),
+//     d_j' = distance from the joint j' to the root along the skeleton (per joint),
+//   so that the skinning matrix of the joint j for the vertex i is
+//     T_j^d = L_root(t - (d_i - d_root)/c) ··· L_j(t - (d_i - d_j)/c) B_j^-1
+//   (L: local joint matrices, B_j^-1: inverse bind matrix).
 //
-// The past poses are stored as local joint matrices L_k (one per skeleton joint), sampled at a
-// fixed time step in a ring buffer. The same history is used by the CPU path and uploaded for the GPU path.
+//   Each local transformation is delayed separately: the motion of a joint starts at this joint and
+//   propagates towards the extremities (e.g. the bumps of the engine of the train going to the last wagon,
+//   or a rotated neck of the giraffe going to the head). The dynamic skinning is then applied on p^dLBS
+//   instead of p^LBS.
+//
+//   The past poses are stored as local joint matrices (one per skeleton joint), sampled at a fixed
+//   time step in a ring buffer. The same history is used by the CPU path (delayed_lbs_apply) and uploaded
+//   in a texture for the GPU path (shaders/skinning/skinning.vert.glsl).
 struct delayed_lbs_state {
     static constexpr int N_history = 120;            // number of stored poses
     static constexpr float dt_history = 1.0f / 60;   // time step between two stored poses (2 s of history)
@@ -26,9 +36,9 @@ struct delayed_lbs_state {
     int head = 0;                 // index of the most recent pose
     float last_record_time = 0;   // time of the most recent pose
 
-    // Distance d_i along the skeleton, per vertex (computed in the initial pose)
+    // Distance d_i from the vertex to the root along the skeleton (computed in the initial pose)
     cgp::numarray<float> distance;
-    // Distance d_k along the skeleton, per joint
+    // Distance d_j from the joint to the root along the skeleton (cumulated bone lengths)
     cgp::numarray<float> joint_distance;
     // Inverse bind matrices B_j^-1, per skeleton joint (identity for the joints that are not in the rig)
     cgp::numarray<cgp::mat4> inverse_bind;
