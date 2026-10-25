@@ -15,7 +15,7 @@
 //   DS_CAPTURE_DELAY  0/1 to disable/enable the delayed LBS (default: model default)
 //   DS_CAPTURE_FPS    frame rate imposed without vsync, e.g. 30 or 120 (default: unchanged)
 //   DS_CAPTURE_GPU    0/1 to force the CPU/GPU skinning path (default: model default)
-//   DS_CAPTURE_EYE    "x,y,z" camera position, looking at the preset center (default: model preset)
+//   DS_CAPTURE_EYE    "x,y,z" camera position, looking at the preset center with its up vector (default: model preset)
 //   DS_CAPTURE_GUI    1 to include the GUI in the frames, 2 to also open the settings window (default: 0)
 //   DS_CAPTURE_SKELETON 0/1 to hide/show the skeleton (default: unchanged)
 // The animation is started, frames are saved as <dir>/<model>_<k>_t<time>.png (without GUI by default),

@@ -7,13 +7,13 @@ L'algorithme n'est pas dupliqué : comme l'application complète, elle utilise `
 ## Compilation et exécution
 
 ```bash
-cd app_minimal
+cd code/app_minimal
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
-./build/minimal        # les shaders et assets sont trouvés à la racine du projet
+./build/minimal        # les shaders et assets sont trouvés dans code/
 ```
 
-Elle est aussi compilée par le `CMakeLists.txt` racine (`build/minimal`).
+Elle est aussi compilée par `code/CMakeLists.txt`, avec l'application complète (`code/build/minimal`).
 
 ## Fichiers
 

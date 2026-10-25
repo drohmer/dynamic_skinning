@@ -33,7 +33,7 @@ Paramètres (notations de l'article) : fréquence **f** (Hz), amortissement **τ
 
 ## Fonctionnement
 
-- **`core.py`** : la méthode, en numpy et sans dépendance à Blender (mêmes calculs que `dynamic_skinning_source/`) : poids hiérarchiques β_ij, vitesse angulaire de chaque os mesurée à partir de sa rotation locale, historique à pas fixe Δt = 1/60 s (indépendant du framerate), convolution avec κ, puis bend.
+- **`core.py`** : la méthode, en numpy et sans dépendance à Blender (mêmes calculs que `code/dynamic_skinning_source/`) : poids hiérarchiques β_ij, vitesse angulaire de chaque os mesurée à partir de sa rotation locale, historique à pas fixe Δt = 1/60 s (indépendant du framerate), convolution avec κ, puis bend.
 - **`blender_link.py`** : lecture du rig et de la pose, LBS des positions, écriture du décalage de chaque sommet dans l'attribut `ds_offset` du maillage. Un modificateur Geometry Nodes *Dynamic Skinning*, ajouté en fin de pile (après l'Armature), l'ajoute aux positions. Un timer à 60 Hz fait la mise à jour.
 - **`__init__.py`** : propriétés, opérateurs et panneau.
 
@@ -51,7 +51,7 @@ Coût d'une mise à jour (Python et numpy en float32, Mac de développement, san
 
 - **`dynamic_skinning/`** : l'extension (la seule partie installée, et le contenu du zip).
 - **`examples/`** : les fichiers d'exemple.
-- **`assets/spot/`** : le modèle de Spot (copié depuis `assets/spot/` des applications). L'add-on est autonome : ni l'extension, ni les exemples, ni les outils n'utilisent le reste du dépôt.
+- **`assets/spot/`** : le modèle de Spot (copié depuis `code/assets/spot/` des applications). L'add-on est autonome : ni l'extension, ni les exemples, ni les outils n'utilisent le reste du dépôt.
 - **`tools/`** : génération des exemples (`make_examples.py`), avec la construction du cylindre riggé (`make_cylinder.py`) et un petit importeur du format des assets des applications (`make_spot.py` : `mesh.obj`, `skeleton_*`, `rig_joint`, `rig_weights`, `texture.png`), réutilisable pour d'autres modèles.
 - **`tests/test_cylinder.py`** : test de non-régression sans interface. L'os du cylindre tourne de 90° en 0.7 s ; le test affiche le décalage maximal à quelques instants et enregistre des rendus Workbench :
 

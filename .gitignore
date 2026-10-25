@@ -7,12 +7,12 @@ imgui.ini
 **/.DS_Store
 # Build outputs
 build_emscripten/
-/complete
-/minimal
-/complete.html
-/complete.js
-/complete.wasm
-/complete.data
-/index.html
+/code/complete
+/code/minimal
+/code/complete.html
+/code/complete.js
+/code/complete.wasm
+/code/complete.data
+/code/index.html
 __pycache__/
 *.blend1

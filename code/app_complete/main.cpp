@@ -67,7 +67,7 @@ int main(int, char* argv[])
 			scene.load_model(capture.model);
 		if (capture.has_eye) {
 			auto& cam = scene.camera_control.camera_model;
-			cam.look_at(capture.eye, cam.center_of_rotation, {0, 1, 0});
+			cam.look_at(capture.eye, cam.center_of_rotation, cam.orientation() * vec3{0, 1, 0});  // keeps the up vector of the preset
 		}
 		if (capture.gpu >= 0)
 			scene.use_gpu_skinning = (capture.gpu == 1);
