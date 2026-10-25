@@ -1,4 +1,7 @@
 #version 330 core 
+// Full precision, as in the vertex shader (the uniforms shared by the two shaders must have the same
+// precision in the web version). Without effect on desktop OpenGL.
+precision highp float;
 
 // Fragment shader - this code is executed for every pixel/fragment that belongs to a displayed shape
 //

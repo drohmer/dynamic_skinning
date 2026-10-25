@@ -1,4 +1,9 @@
 #version 330 core
+// Full precision: in the web version (OpenGL ES 3.0), the shader would otherwise use mediump floats
+// (16 bits on phones and tablets) and lowp samplers in the vertex shader, which destroys the skinning.
+// Without effect on desktop OpenGL.
+precision highp float;
+precision highp sampler2D;
 
 // GPU Skinning vertex shader — LBS + Dynamic Skinning (pre-filtered velocity + bend deformer)
 // The oscillation filter convolution is computed on CPU per joint;

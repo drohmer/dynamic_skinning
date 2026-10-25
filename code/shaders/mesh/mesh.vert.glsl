@@ -1,4 +1,8 @@
 #version 330 core
+// Full precision: in the web version (OpenGL ES 3.0), the shader would otherwise use mediump floats
+// (16 bits on phones and tablets).
+// Without effect on desktop OpenGL.
+precision highp float;
 
 // Vertex shader - this code is executed for every vertex of the shape
 
