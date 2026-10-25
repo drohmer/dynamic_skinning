@@ -149,6 +149,7 @@ Indépendance au framerate : la vitesse angulaire de chaque joint est mesurée �
   - **`capture/`** — Captures d'écran automatiques
 - **`app_minimal/`** — Application minimale (exécutable `minimal`, CPU seulement, cylindre / girafe / clown, caméra et paramètres f, τ, A, D) ; voir son README
 - **`blender_addon/`** — Prototype d'add-on Blender (5.0+), autonome avec ses propres modèles (`blender_addon/assets/`) : dynamic skinning en numpy, appliqué par un modificateur Geometry Nodes ; voir son README
+- **`pdf/`** — Version auteur de l'article (`Dynamic_Skinning_TVCG2026_author_version.pdf`)
 - **`shaders/`** — Shaders GLSL
   - `mesh/` — Shaders standard (Phong)
   - `single_color/` — Shader couleur uniforme (squelette)
