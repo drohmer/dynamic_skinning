@@ -8,6 +8,7 @@
 #include <thread>
 #include <sstream>
 #include <cstdlib>
+#include <algorithm>
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
@@ -65,9 +66,11 @@ int main(int, char* argv[])
 	scene.window = standard_window_initialization();
 
 #ifdef __EMSCRIPTEN__
-	// Touch screen (phones, tablets): larger GUI, so that the widgets can be used with a finger
+	// Touch screen (phones, tablets): larger GUI, so that the widgets can be used with a finger, limited by the size
+	// of the screen (the GUI is about 260 points wide at scale 1): 1.2 on a phone, 1.6 on a tablet
 	if (EM_ASM_INT({ return navigator.maxTouchPoints > 0 ? 1 : 0; })) {
-		project::gui_scale = 1.6f;
+		float const screen_size = float(EM_ASM_DOUBLE({ return Math.min(window.innerWidth, window.innerHeight); }));
+		project::gui_scale = std::clamp(screen_size / 320.0f, 1.0f, 1.6f);
 		ImGui::GetStyle().ScaleAllSizes(project::gui_scale);
 		ImGui::GetIO().ConfigWindowsMoveFromTitleBarOnly = true;  // no accidental move of the windows
 	}
