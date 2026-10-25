@@ -9,17 +9,14 @@ namespace cgp
 
 	void camera_controller_orbit_euler::action_mouse_move()
 	{
-		// Preconditions
-		assert_cgp_no_msg(inputs != nullptr);
-		assert_cgp_no_msg(window != nullptr);
-		if (!is_active) return;
+		if (!is_ready()) return;
 
 		vec2 const& p1 = inputs->mouse.position.current;
 		vec2 const& p0 = inputs->mouse.position.previous;
 		vec2 const dp = p1 - p0;
 
 		bool const event_valid = !inputs->mouse.on_gui;
-		bool const click_left = inputs->mouse.click.left && !(inputs->mouse.click.left && inputs->keyboard.is_pressed("k"));
+		bool const click_left = inputs->mouse.click.left && !inputs->keyboard.is_pressed("k");
 		bool const click_right = inputs->mouse.click.right || (inputs->mouse.click.left && inputs->keyboard.is_pressed("k"));
 		bool const ctrl = inputs->keyboard.ctrl;
 
@@ -28,20 +25,17 @@ namespace cgp
 			if (click_left && !ctrl)     // Rotation of the camera around its center
 				camera_model.manipulator_rotate_roll_pitch_yaw(0, dp.y, -dp.x);
 			else if (click_left && ctrl) // Translate/Pan the camera in the viewspace plane
-				camera_model.manipulator_translate_in_plane(p1 - p0);
+				camera_model.manipulator_translate_in_plane(p0 - p1);
 			else if (click_right && !ctrl) // Move the camera closer/further with respect to its center
 				camera_model.manipulator_scale_distance_to_center((p1 - p0).y);
 			else if (click_right && ctrl) // Translate the camera center in front/back
-				camera_model.manipulator_translate_front((p1 - p0).y);
+				camera_model.manipulator_translate_front((p0 - p1).y);
 		}
 
 	}
 	void camera_controller_orbit_euler::idle_frame()
 	{
-		// Preconditions
-		assert_cgp_no_msg(inputs != nullptr);
-		assert_cgp_no_msg(window != nullptr);
-		if (!is_active) return;
+		if (!is_ready()) return;
 
 		bool const shift = inputs->keyboard.shift;
 		float const angle_magnitude = 2 * inputs->time_interval;

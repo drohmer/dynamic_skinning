@@ -62,5 +62,21 @@ namespace cgp_test
 			assert_cgp_no_msg( is_equal(norm(orthogonal_vector(vec3{5,3,-4})),1.0f) );
 		}
 
+
+	// build_diagonal(vec) — last diagonal element must be on the diagonal, not off
+	{
+		assert_cgp_no_msg( is_equal(mat3::build_diagonal(vec3{2,3,5}), mat3{2,0,0, 0,3,0, 0,0,5}) );
+		assert_cgp_no_msg( is_equal(mat2::build_diagonal(vec2{4,7}),   mat2{4,0, 0,7}) );
+		assert_cgp_no_msg( is_equal(mat4::build_diagonal(vec4{1,2,3,4}), mat4{1,0,0,0, 0,2,0,0, 0,0,3,0, 0,0,0,4}) );
+	}
+
+	// tensor_product — every row i must use a[i], not a mix of components
+	{
+		vec4 a = {1,2,3,4};
+		vec4 b = {5,6,7,8};
+		mat4 expected = {1*5,1*6,1*7,1*8, 2*5,2*6,2*7,2*8, 3*5,3*6,3*7,3*8, 4*5,4*6,4*7,4*8};
+		assert_cgp_no_msg( is_equal(tensor_product(a,b), expected) );
+	}
+
 	}
 }

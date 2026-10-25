@@ -39,6 +39,11 @@ namespace cgp
         return location;
     }
 
+    void cache_uniform_location_structure::clear(GLuint shaderID)
+    {
+        cache_data.erase(shaderID);
+    }
+
     std::string str(cache_uniform_location_structure const& cache)
     {
         std::string s;

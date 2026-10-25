@@ -45,7 +45,7 @@ void scene_structure::display_gui()
 	ImGui::SetNextItemWidth(160);
 	if (ImGui::BeginCombo("Model", current_model_name.c_str())) {
 		// Display order: models with a pre-designed animation first, then the other legacy models
-		std::vector<std::string> model_names = {"Cylinder", "Girafe", "Clown", "Spot", "Snail", "Dragon", "Cthulhu"};
+		std::vector<std::string> model_names = {"Cylinder", "Girafe", "Clown", "Spot", "Snail", "Dragon", "Cthulhu", "Train"};
 		for (auto const& m : get_legacy_models())
 			if (std::find(model_names.begin(), model_names.end(), m.name) == model_names.end())
 				model_names.push_back(m.name);
@@ -81,9 +81,25 @@ void scene_structure::display_gui()
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Color the per-vertex bend weights (white: rigid, red: floppy)");
 	}
+	// Flexible origins of the Clown (arms and hat bent around their own origin, rigid body)
+	if (current_model_name == "Clown") {
+		ImGui::SameLine();
+		if (ImGui::Checkbox("Local centers", &clown_flexible_origins))
+			load_model("Clown");
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Rigid body: the arms and the hat bend around their own origin (yellow)\ninstead of the rotating joint");
+	}
 
 	// ---- Dynamic skinning and its main parameters ----
 	ImGui::Checkbox("Dynamic skinning", &ds_params.active);
+	ImGui::SameLine();
+	if (ImGui::Checkbox("Delay", &ds_params.delay_active) && ds_params.delay_active && !delay_enabled_once) {
+		// First activation: show the delay alone
+		delay_enabled_once = true;
+		ds_params.active = false;
+	}
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("Delayed LBS (dLBS): the motion of each joint propagates\ntowards the extremities at the speed c");
 
 	// ---- Main oscillation parameters (with the notations of the paper) ----
 	if (ds_params.active) {
@@ -109,6 +125,14 @@ void scene_structure::display_gui()
 		ImGui::SliderFloat("Drag D", &ds_params.drag, 0.0f, 3.0f, "%.2f");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Lag during the motion (proportional to the velocity)");
+	}
+
+	// Propagation speed c of the delayed LBS
+	if (ds_params.delay_active) {
+		ImGui::SetNextItemWidth(160);
+		ImGui::SliderFloat("Delay speed c", &ds_params.delay_speed, 0.5f, 10.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Propagation speed (model units per second, the model fits in [-1, 1])");
 	}
 
 	ImGui::End();

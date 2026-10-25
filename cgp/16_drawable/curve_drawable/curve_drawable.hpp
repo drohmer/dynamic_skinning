@@ -28,7 +28,7 @@ namespace cgp
 		opengl_vbo_structure vbo_position;
 
 		// VAO indicating the VBO organization
-		GLuint vao;
+		GLuint vao = 0;
 
 		// Uniform
 		affine model;

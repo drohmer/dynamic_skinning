@@ -139,7 +139,7 @@ namespace cgp
         mat4& set_block_translation(vec3 const& tr);
         mat4& set_block_translation(float x, float y, float z);
 
-        // Return the translation part of a 4x4 matrix vec3(m(2,0),m(2,1),m(2,2))
+        // Return the translation part of a 4x4 matrix vec3(m(0,3),m(1,3),m(2,3))
         vec3 get_block_translation() const;
         // Return the 3x3 matrix component out of the 4x4 matrix. Similar to the call mat3(M4x4).
         mat3 get_block_linear() const;
@@ -235,25 +235,25 @@ namespace cgp
 
         /** Iterators
         *  Iterators compatible with STL syntax and std::array */
-        float* begin();
-        float* end();
-        float const* begin() const;
-        float const* end() const;
-        float const* cbegin() const;
-        float const* cend() const;
+        inline float* begin()              { return &data.coeff(0).coeff(0); }
+        inline float* end()                { return &data.coeff(3).coeff(3) + 1; }
+        inline float const* begin() const  { return &data.coeff(0).coeff(0); }
+        inline float const* end() const    { return &data.coeff(3).coeff(3) + 1; }
+        inline float const* cbegin() const { return &data.coeff(0).coeff(0); }
+        inline float const* cend() const   { return &data.coeff(3).coeff(3) + 1; }
 
 
         inline float const& at(int k1, int k2) const;
         inline float& at(int k1, int k2);
 
-        float const& at_unsafe(int k1, int k2) const;
-        float& at_unsafe(int k1, int k2);
+        inline float const& coeff(int k1, int k2) const { return data.coeff(k1).coeff(k2); }
+        inline float& coeff(int k1, int k2)             { return data.coeff(k1).coeff(k2); }
 
-        vec4 const& at_unsafe(int k1) const;
-        vec4& at_unsafe(int k1);
+        inline vec4 const& coeff(int k1) const { return data.coeff(k1); }
+        inline vec4& coeff(int k1)             { return data.coeff(k1); }
 
-        float const& at_offset_unsafe(int offset) const;
-        float& at_offset_unsafe(int offset);
+        inline float const& at_offset_unsafe(int offset) const { return begin()[offset]; }
+        inline float& at_offset_unsafe(int offset)             { return begin()[offset]; }
 
 
 
@@ -280,22 +280,22 @@ namespace cgp
         int const N2m = std::min(int(4), N2_arg);
         for (int k1 = 0; k1 < N1m; ++k1)
             for (int k2 = 0; k2 < N2m; ++k2)
-                at(k1, k2) = M.at(k1, k2);
+                coeff(k1, k2) = M.coeff(k1, k2);
     }
 
     template <int N1_arg, int N2_arg>
     matrix_stack<float, 4, 4>& matrix_stack<float, 4, 4>::set_block(matrix_stack<float, N1_arg, N2_arg> const& block, int offset_1, int offset_2)
     {
-        static_assert(N1_arg < 4, "Block size is too large for the current matrix");
-        static_assert(N2_arg < 4, "Block size is too large for the current matrix");
-        assert_cgp(N1_arg + offset_1 < 4, "Block size exceed current matrix size");
-        assert_cgp(N2_arg + offset_2 < 4, "Block size exceed current matrix size");
+        static_assert(N1_arg <= 4, "Block size is too large for the current matrix");
+        static_assert(N2_arg <= 4, "Block size is too large for the current matrix");
+        assert_cgp(N1_arg + offset_1 <= 4, "Block size exceed current matrix size");
+        assert_cgp(N2_arg + offset_2 <= 4, "Block size exceed current matrix size");
 
         for (int k1 = 0; k1 < N1_arg; ++k1) {
             int const idx_1 = k1 + offset_1;
             for (int k2 = 0; k2 < N2_arg; ++k2) {
                 int const idx_2 = k2 + offset_2;
-                at(idx_1, idx_2) = block.at(k1, k2);
+                coeff(idx_1, idx_2) = block.coeff(k1, k2);
             }
         }
         return *this;
@@ -304,11 +304,13 @@ namespace cgp
 
     float const& matrix_stack<float, 4, 4>::at(int k1, int k2) const
     {
-        return *(begin() + k2 + 4 * k1);
+        check_index_bounds(k1, k2, *this);
+        return coeff(k1, k2);
     }
     float& matrix_stack<float, 4, 4>::at(int k1, int k2)
     {
-        return *(begin() + k2 + 4 * k1);
+        check_index_bounds(k1, k2, *this);
+        return coeff(k1, k2);
     }
 
 

@@ -8,7 +8,10 @@ namespace cgp
 	{
 		camera_first_person_euler camera_model;
 
-		void action_mouse_move();
+		camera_generic_base&       camera()       override { return camera_model; }
+		camera_generic_base const& camera() const override { return camera_model; }
+
+		void action_mouse_move() override;
 
 		void set_rotation_axis(vec3 const& rotation_axis);
 		void set_rotation_axis_x();
@@ -16,16 +19,13 @@ namespace cgp
 		void set_rotation_axis_z();
 
 		// Key 'C' (in capital) to capture the cursor
-		void action_keyboard();
+		void action_keyboard() override;
 
 		// Keys up/down/left/right used to translate the camera
-		void idle_frame();
+		void idle_frame() override;
 
 		void look_at(vec3 const& eye, vec3 const& center, vec3 const& unused = vec3() /*Only for compatibility*/);
-		std::string doc_usage() const;
+		std::string doc_usage() const override;
 
-	protected:
-		// true = cursor captured (/infinite motion), false = cursor free
-		bool is_cursor_trapped = false; 
 	};
 }

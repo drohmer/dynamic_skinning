@@ -1,11 +1,16 @@
 #include "ebo.hpp"
 #include "../../debug/debug.hpp"
+#include "cgp/01_base/base.hpp"
 
 namespace cgp
 {
 
 	void opengl_ebo_structure::initialize_data_on_gpu(numarray<uint3> const& data)
 	{
+		if (id != 0) {
+			warning_cgp("Calling initialize_data_on_gpu() on a non-empty EBO",
+				"The previously allocated GPU buffer will be lost. Call clear() before re-initializing.");
+		}
 
 		glGenBuffers(1, &id); opengl_check;
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, id); opengl_check;

@@ -19,6 +19,11 @@ namespace cgp
 		//  If uniformName is not found return (and cache) the value -1.
 		GLint query(GLuint shaderID, std::string const& uniformName);
 
+		// Remove all cached uniform locations for a given shader program id.
+		//  Must be called when a program is deleted, otherwise a driver reusing the id
+		//  would return stale (wrong) locations.
+		void clear(GLuint shaderID);
+
 	};
 
 	std::string str(cache_uniform_location_structure const& cache);

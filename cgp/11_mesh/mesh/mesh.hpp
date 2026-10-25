@@ -66,7 +66,7 @@ namespace cgp
 	bool mesh_check(mesh const& m);
 
 
-	numarray<numarray<int> > connectivity_one_ring(numarray<uint3> const& connectivity);
+	numarray<numarray<int> > connectivity_one_ring(numarray<uint3> const& connectivity, int N_vertex);
 
 	std::string str(mesh const& m);
 	std::string type_str(mesh const&);

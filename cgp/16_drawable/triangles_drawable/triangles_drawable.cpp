@@ -65,6 +65,7 @@ namespace cgp
 				n[k-1] = n_tri;
 				n[k-2] = n_tri;
 			}
+			vbo_normal.initialize_data_on_gpu(n); // upload the auto-computed normals
 		}
 		else {
 			vbo_normal.initialize_data_on_gpu(normal);
@@ -133,7 +134,7 @@ namespace cgp
 	}
 
 
-	void draw(triangles_drawable const& drawable, environment_generic_structure const& environment, uniform_generic_structure const& additional_uniforms)
+	void draw(triangles_drawable const& drawable, environment_generic_structure const& environment, uniform_generic_structure const& additional_uniforms, material_mesh_drawable_phong const* material_override)
 	{
 		// Initial clean check
 		// ********************************** //
@@ -143,7 +144,7 @@ namespace cgp
 			return;
 
 		assert_cgp(drawable.shader.id != 0, "Try to draw mesh_drawable without shader ");
-		assert_cgp(!glIsShader(drawable.shader.id), "Try to draw mesh_drawable with incorrect shader ");
+		assert_cgp(glIsProgram(drawable.shader.id), "Try to draw triangles_drawable with incorrect shader ");
 		assert_cgp(drawable.texture.id != 0, "Try to draw mesh_drawable without texture ");
 
 		// Set the current shader
@@ -153,8 +154,12 @@ namespace cgp
 		// Send uniforms for this shader
 		// ********************************** //
 
-		// send the uniform values for the model and material of the mesh_drawable
+		// send the uniform values for the model and material of the triangles_drawable
 		drawable.send_opengl_uniform();
+
+		// optional material override (e.g. for the wireframe pass): re-sent after, so it wins
+		if (material_override != nullptr)
+			material_override->send_opengl_uniform(drawable.shader);
 
 		// send the uniform values for the environment
 		environment.send_opengl_uniform(drawable.shader);
@@ -197,21 +202,33 @@ namespace cgp
 		// Clean state
 		// ********************************** //
 		glBindVertexArray(0);
+
+		// Unbind every texture unit that was bound, and restore the active unit to GL_TEXTURE0.
+		int texture_unit_cleanup = 1;
+		for (auto const& element : drawable.supplementary_texture) {
+			glActiveTexture(GL_TEXTURE0 + texture_unit_cleanup); opengl_check;
+			element.second.unbind();
+			texture_unit_cleanup++;
+		}
+		glActiveTexture(GL_TEXTURE0); opengl_check;
 		drawable.texture.unbind();
+
 		glUseProgram(0);
 	}
 
 	void draw_wireframe(triangles_drawable const& drawable, environment_generic_structure const& environment, vec3 const& color, uniform_generic_structure const& additional_uniforms)
 	{
 		#ifndef __EMSCRIPTEN__
-		triangles_drawable wireframe = drawable;
-		wireframe.material.phong = { 1.0f,0.0f,0.0f,64.0f };
-		wireframe.material.color = color;
-		wireframe.material.texture_settings.active = false;
+		// Wireframe material (flat color, no texture). Passed by pointer to draw() so it
+		//  reuses the same drawable - no copy of its textures / supplementary VBOs per call.
+		material_mesh_drawable_phong wireframe_material;
+		wireframe_material.phong = { 1.0f,0.0f,0.0f,64.0f };
+		wireframe_material.color = color;
+		wireframe_material.texture_settings.active = false;
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		glEnable(GL_POLYGON_OFFSET_LINE);
 		glPolygonOffset(-1.0, 1.0);        opengl_check;
-		draw(wireframe, environment, additional_uniforms);
+		draw(drawable, environment, additional_uniforms, &wireframe_material);
 		glDisable(GL_POLYGON_OFFSET_LINE); opengl_check;
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		#endif
@@ -223,13 +240,10 @@ namespace cgp
 		// Final model matrix in the shader is: hierarchy_transform_model * model
 		mat4 const model_shader = hierarchy_transform_model.matrix() * model.matrix();
 
-		// The normal matrix is transpose( (hierarchy_transform_model * model)^{-1} )
-		mat4 const model_normal_shader = transpose(inverse(model).matrix() * inverse(hierarchy_transform_model).matrix());
-		
-
 		// set the Model matrix
+		//  Note: the normal matrix transpose(inverse(model)) is derived in the vertex shader
+		//  (consistent with mesh_drawable), so no modelNormal uniform is sent from here.
 		opengl_uniform(shader, "model", model_shader, expected);
-		opengl_uniform(shader, "modelNormal", model_normal_shader, expected);
 
 		// set the material
 		material.send_opengl_uniform(shader);

@@ -23,7 +23,7 @@ namespace cgp
 		void update(numarray<vec3> const& data, int size_elements_update = -1);
 		void update(numarray<vec4> const& data, int size_elements_update = -1);
 
-		GLuint divisor;
+		GLuint divisor = 0;
 	};
 
 	/** Call glVertexAttribPointer and set the correspondance between VBO and the location in the shader */

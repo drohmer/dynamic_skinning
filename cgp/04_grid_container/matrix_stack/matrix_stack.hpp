@@ -99,11 +99,11 @@ namespace cgp
         inline T const& at(int k1, int k2) const;
         inline T& at(int k1, int k2);
 
-        T const& at_unsafe(int k1, int k2) const;
-        T& at_unsafe(int k1, int k2);
+        T const& coeff(int k1, int k2) const;
+        T& coeff(int k1, int k2);
 
-        numarray_stack<T, N2> const& at_unsafe(int k1) const;
-        numarray_stack<T, N2>& at_unsafe(int k1);
+        numarray_stack<T, N2> const& coeff(int k1) const;
+        numarray_stack<T, N2>& coeff(int k1);
 
         T const& at_offset_unsafe(int offset) const;
         T& at_offset_unsafe(int offset);
@@ -157,13 +157,13 @@ namespace cgp
 
 
     template <typename T, int N> matrix_stack<T, N, N>& operator*=(matrix_stack<T, N, N>& a, matrix_stack<T, N, N> const& b);
-    template <typename T, int N1, int N2> matrix_stack<T, N1, N2>& operator*=(matrix_stack<T, N1, N2>& a, float b);
+    template <typename T, int N1, int N2, typename S> matrix_stack<T, N1, N2>& operator*=(matrix_stack<T, N1, N2>& a, S b);
     template <typename T, int N1, int N2, int N3> matrix_stack<T, N1, N3>  operator*(matrix_stack<T, N1, N2> const& a, matrix_stack<T, N2, N3> const& b);
-    template <typename T, int N1, int N2> matrix_stack<T, N1, N2>  operator*(matrix_stack<T, N1, N2> const& a, float b);
-    template <typename T, int N1, int N2> matrix_stack<T, N1, N2>  operator*(float a, matrix_stack<T, N1, N2> const& b);
+    template <typename T, int N1, int N2, typename S> matrix_stack<T, N1, N2>  operator*(matrix_stack<T, N1, N2> const& a, S b);
+    template <typename T, int N1, int N2, typename S> matrix_stack<T, N1, N2>  operator*(S a, matrix_stack<T, N1, N2> const& b);
 
-    template <typename T, int N1, int N2> matrix_stack<T, N1, N2>& operator/=(matrix_stack<T, N1, N2>& a, float b);
-    template <typename T, int N1, int N2> matrix_stack<T, N1, N2>  operator/(matrix_stack<T, N1, N2> const& a, float b);
+    template <typename T, int N1, int N2, typename S> matrix_stack<T, N1, N2>& operator/=(matrix_stack<T, N1, N2>& a, S b);
+    template <typename T, int N1, int N2, typename S> matrix_stack<T, N1, N2>  operator/(matrix_stack<T, N1, N2> const& a, S b);
 
     // Unary negation
     template <typename T, int N1, int N2> matrix_stack<T, N1, N2> operator-(matrix_stack<T, N1, N2> const& m);
@@ -210,19 +210,19 @@ namespace cgp
     }
 
 
-    template <typename T, int N1, int N2> T* matrix_stack<T, N1, N2>::begin() { return &at_unsafe(0, 0); }
-    template <typename T, int N1, int N2> T* matrix_stack<T, N1, N2>::end() { return &at_unsafe(N1-1, N2-1)+1; }
-    template <typename T, int N1, int N2> T const* matrix_stack<T, N1, N2>::begin() const { return &at_unsafe(0, 0); }
-    template <typename T, int N1, int N2> T const* matrix_stack<T, N1, N2>::end() const { return &at_unsafe(N1 - 1, N2 - 1) + 1; }
-    template <typename T, int N1, int N2> T const* matrix_stack<T, N1, N2>::cbegin() const { return &at_unsafe(0, 0); }
-    template <typename T, int N1, int N2> T const* matrix_stack<T, N1, N2>::cend() const { return &at_unsafe(N1 - 1, N2 - 1) + 1; }
+    template <typename T, int N1, int N2> T* matrix_stack<T, N1, N2>::begin() { return &coeff(0, 0); }
+    template <typename T, int N1, int N2> T* matrix_stack<T, N1, N2>::end() { return &coeff(N1-1, N2-1)+1; }
+    template <typename T, int N1, int N2> T const* matrix_stack<T, N1, N2>::begin() const { return &coeff(0, 0); }
+    template <typename T, int N1, int N2> T const* matrix_stack<T, N1, N2>::end() const { return &coeff(N1 - 1, N2 - 1) + 1; }
+    template <typename T, int N1, int N2> T const* matrix_stack<T, N1, N2>::cbegin() const { return &coeff(0, 0); }
+    template <typename T, int N1, int N2> T const* matrix_stack<T, N1, N2>::cend() const { return &coeff(N1 - 1, N2 - 1) + 1; }
 
-    template <typename T, int N1, int N2> T const& matrix_stack<T, N1, N2>::at_unsafe(int k1, int k2) const { return data.at_unsafe(k1).at_unsafe(k2); }
-    template <typename T, int N1, int N2> T& matrix_stack<T, N1, N2>::at_unsafe(int k1, int k2) { return data.at_unsafe(k1).at_unsafe(k2); }
+    template <typename T, int N1, int N2> T const& matrix_stack<T, N1, N2>::coeff(int k1, int k2) const { return data.coeff(k1).coeff(k2); }
+    template <typename T, int N1, int N2> T& matrix_stack<T, N1, N2>::coeff(int k1, int k2) { return data.coeff(k1).coeff(k2); }
 
 
-    template <typename T, int N1, int N2> numarray_stack<T, N2> const& matrix_stack<T, N1, N2>::at_unsafe(int k1) const { return data.at_unsafe(k1); }
-    template <typename T, int N1, int N2> numarray_stack<T, N2>& matrix_stack<T, N1, N2>::at_unsafe(int k1) { return data.at_unsafe(k1); }
+    template <typename T, int N1, int N2> numarray_stack<T, N2> const& matrix_stack<T, N1, N2>::coeff(int k1) const { return data.coeff(k1); }
+    template <typename T, int N1, int N2> numarray_stack<T, N2>& matrix_stack<T, N1, N2>::coeff(int k1) { return data.coeff(k1); }
 
     template <typename T, int N1, int N2> T const& matrix_stack<T, N1, N2>::at_offset_unsafe(int offset) const { return begin()[offset];}
     template <typename T, int N1, int N2> T& matrix_stack<T, N1, N2>::at_offset_unsafe(int offset) { return begin()[offset]; }
@@ -246,7 +246,7 @@ namespace cgp
         int counter = 0;
         for (int k1 = 0; k1 < N1; ++k1)
             for (int k2 = 0; k2 < N2; ++k2) {
-                at_unsafe(k1, k2) = elements.at_unsafe(counter);
+                coeff(k1, k2) = elements.coeff(counter);
                 counter++;
             }
     }
@@ -260,7 +260,7 @@ namespace cgp
 
         for (int k1 = 0; k1 < N1; ++k1) {
             for (int k2 = 0; k2 < N2; ++k2) {
-                at_unsafe(k1, k2) = *it_arg;
+                coeff(k1, k2) = *it_arg;
                 ++it_arg;
             }
         }
@@ -274,7 +274,7 @@ namespace cgp
         assert_cgp(arg.size() >= N1, "Insufficient size to initialize matrix_stack");
         auto it_arg = arg.begin();
         for (int k1 = 0; k1 < N1; ++k1) {
-            data.at_unsafe(k1) = *it_arg;
+            data.coeff(k1) = *it_arg;
             ++it_arg;
         }
     }
@@ -288,7 +288,7 @@ namespace cgp
         int const N2m = std::min(N2, N2_arg);
         for (int k1 = 0; k1 < N1m; ++k1)
             for (int k2 = 0; k2 < N2m; ++k2)
-                at_unsafe(k1, k2) = M.at_unsafe(k1, k2);
+                coeff(k1, k2) = M.coeff(k1, k2);
     }
 
 
@@ -308,116 +308,37 @@ namespace cgp
     template <typename T, int N1, int N2>
     void check_index_bounds(int index1, int index2, matrix_stack<T, N1, N2> const& data)
     {
-#ifndef cgp_NO_DEBUG
-        if (index1 < 0 || index2 < 0 || index1 >= N1 || index2 >= N2)
-        {
-            std::string msg = "\n";
-
-            msg += "\t> Try to access matrix_stack(" + str(index1) + "," + str(index2) + ")\n";
-            msg += "\t>    - matrix_stack has dimension = (" + str(N1) + "," + str(N2) + ")\n";
-            msg += "\t>    - Type of matrix_stack: " + type_str(data) + "\n";
-
-            if (index1 < 0 || index2 < 0)
-            {
-                msg += "\t> Buffer cannot be access with negative index.\n";
-            }
-            else if (N1 == 0 || N2 == 0)
-            {
-                msg += "\t> The buffer is empty, its elements cannot be accessed.\n";
-            }
-            else if (index1 == N1 || index2 == N2)
-            {
-                msg += "\t> Index reached the maximal size of the buffer \n";
-                msg += "\t> The maximal possible indexes should be (" + str(N1 - 1) + "," + str(N2 - 1) + ") \n";
-            }
-            else if (index1 >= N1 || index2 >= N2)
-            {
-                msg += "\t> Exceeded buffer dimension \n";
-            }
-
-
-            msg += "\n\t  The function and variable that generated this error can be found in analysis the Call Stack.\n";
-
-            error_cgp(msg);
-        }
+#ifndef CGP_NO_DEBUG
+        if (index1 < 0 || index1 >= N1)
+            error_cgp(index_out_of_bounds_message(index1, N1, "first index (row)", type_str(data)));
+        if (index2 < 0 || index2 >= N2)
+            error_cgp(index_out_of_bounds_message(index2, N2, "second index (column)", type_str(data)));
+#else
+        (void)index1; (void)index2; (void)data;
 #endif
     }
 
     template <typename T, int N1, int N2>
-    void check_index_bounds(int index2, matrix_stack<T, N1, N2> const& data)
+    void check_index_bounds(int index1, matrix_stack<T, N1, N2> const& data)
     {
-#ifndef cgp_NO_DEBUG
-        if (index2 < 0 || index2 >= N2)
-        {
-            std::string msg = "\n";
-
-            msg += "\t> Try to access matrix_stack(" + str(index2) + ")\n";
-            msg += "\t>    - matrix_stack has dimension = (" + str(N1) + "," + str(N2) + ")\n";
-            msg += "\t>    - maximal first index is = (" + str(N2-1) + ")\n";
-            msg += "\t>    - Type of matrix_stack: " + type_str(data) + "\n";
-
-            if (index2 < 0)
-            {
-                msg += "\t> Buffer cannot be access with negative index.\n";
-            }
-            else if (N2 == 0)
-            {
-                msg += "\t> The buffer is empty, its elements cannot be accessed.\n";
-            }
-            else if (index2 == N2)
-            {
-                msg += "\t> Index reached the maximal size of the buffer \n";
-                msg += "\t> The maximal possible indexes should be (" + str(N1 - 1) + "," + str(N2 - 1) + ") \n";
-            }
-            else if (index2 >= N2)
-            {
-                msg += "\t> Exceeded buffer dimension \n";
-            }
-
-
-            msg += "\n\t  The function and variable that generated this error can be found in analysis the Call Stack.\n";
-
-            error_cgp(msg);
-        }
+        // Single-index access matrix_stack[k1] / matrix_stack(k1) returns the k1-th row,
+        //  so k1 must be checked against the number of rows N1 (not the number of columns N2).
+#ifndef CGP_NO_DEBUG
+        if (index1 < 0 || index1 >= N1)
+            error_cgp(index_out_of_bounds_message(index1, N1, "row index", type_str(data)));
+#else
+        (void)index1; (void)data;
 #endif
     }
 
     template <typename T, int N1, int N2>
     void check_offset_bounds(int offset, matrix_stack<T, N1, N2> const& data)
     {
-#ifndef cgp_NO_DEBUG
+#ifndef CGP_NO_DEBUG
         if (offset < 0 || offset >= N1*N2 )
-        {
-            std::string msg = "\n";
-
-            msg += "\t> Try to access matrix_stack.at_offset(" + str(offset) + ")\n";
-            msg += "\t>    - matrix_stack has dimension = (" + str(N1) + "," + str(N2) + ")\n";
-            msg += "\t>    - the maximal offset is = (" + str(N1*N2) + ")\n";
-            msg += "\t>    - Type of matrix_stack: " + type_str(data) + "\n";
-
-            if (offset < 0)
-            {
-                msg += "\t> Buffer cannot be access with negative index.\n";
-            }
-            else if (offset == 0)
-            {
-                msg += "\t> The buffer is empty, its elements cannot be accessed.\n";
-            }
-            else if (offset == N1*N2)
-            {
-                msg += "\t> Offset reached the maximal size of the buffer \n";
-                msg += "\t> The maximal possible offset should be (" + str( N1*N2 - 1) + ") \n";
-            }
-            else if (offset >= N1*N2 )
-            {
-                msg += "\t> Exceeded buffer dimension \n";
-            }
-
-
-            msg += "\n\t  The function and variable that generated this error can be found in analysis the Call Stack.\n";
-
-            error_cgp(msg);
-        }
+            error_cgp(index_out_of_bounds_message(offset, N1*N2, "offset", type_str(data)));
+#else
+        (void)offset; (void)data;
 #endif
     }
 
@@ -425,35 +346,35 @@ namespace cgp
     template <typename T, int N1, int N2>
     numarray_stack<T, N2> const& matrix_stack<T, N1, N2>::operator[](int k1) const {
         check_index_bounds(k1, *this);
-        return at_unsafe(k1);
+        return coeff(k1);
     }
     template <typename T, int N1, int N2>
     numarray_stack<T, N2>& matrix_stack<T, N1, N2>::operator[](int k1) {
         check_index_bounds(k1, *this);
-        return at_unsafe(k1);
+        return coeff(k1);
     }
 
     template <typename T, int N1, int N2>
     numarray_stack<T, N2> const& matrix_stack<T, N1, N2>::operator()(int k1) const {
         check_index_bounds(k1, *this);
-        return at_unsafe(k1);
+        return coeff(k1);
     }
     template <typename T, int N1, int N2>
     numarray_stack<T, N2>& matrix_stack<T, N1, N2>::operator()(int k1) {
         check_index_bounds(k1, *this);
-        return at_unsafe(k1);
+        return coeff(k1);
     }
 
 
     template <typename T, int N1, int N2>
     T const& matrix_stack<T, N1, N2>::operator()(int k1, int k2) const {
         check_index_bounds(k1, k2, *this);
-        return at_unsafe(k1,k2);
+        return coeff(k1,k2);
     }
     template <typename T, int N1, int N2>
     T& matrix_stack<T, N1, N2>::operator()(int k1, int k2) {
         check_index_bounds(k1, k2, *this);
-        return at_unsafe(k1, k2);
+        return coeff(k1, k2);
     }
 
 
@@ -473,16 +394,16 @@ namespace cgp
     template <int N1_arg, int N2_arg>
     matrix_stack<T, N1, N2>& matrix_stack<T, N1, N2>::set_block(matrix_stack<T, N1_arg, N2_arg> const& block, int offset_1, int offset_2)
     {
-        static_assert(N1_arg < N1, "Block size is too large for the current matrix");
-        static_assert(N2_arg < N2, "Block size is too large for the current matrix");
-        assert_cgp(N1_arg + offset_1 < N1, "Block size exceed current matrix size");
-        assert_cgp(N2_arg + offset_2 < N2, "Block size exceed current matrix size");
+        static_assert(N1_arg <= N1, "Block size is too large for the current matrix");
+        static_assert(N2_arg <= N2, "Block size is too large for the current matrix");
+        assert_cgp(N1_arg + offset_1 <= N1, "Block size exceed current matrix size");
+        assert_cgp(N2_arg + offset_2 <= N2, "Block size exceed current matrix size");
 
         for (int k1 = 0; k1 < N1_arg; ++k1) {
             int const idx_1 = k1 + offset_1;
             for (int k2 = 0; k2 < N2_arg; ++k2) {
                 int const idx_2 = k2 + offset_2;
-                at_unsafe(idx_1, idx_2) = block.at_unsafe(k1, k2);
+                coeff(idx_1, idx_2) = block.coeff(k1, k2);
             }
         }
         return *this;
@@ -566,7 +487,7 @@ namespace cgp
         for (int k1 = 0; k1 < N1; ++k1) {
             s += begin_line;
             for (int k2 = 0; k2 < N2; ++k2) {
-                s += str(v.at_unsafe(k1, k2));
+                s += str(v.coeff(k1, k2));
                 if ( k2 != N2 - 1)
                     s += separator;
             }
@@ -649,7 +570,7 @@ namespace cgp
         a = res;
         return a;
     }
-    template <typename T, int N1, int N2> matrix_stack<T, N1, N2>& operator*=(matrix_stack<T, N1, N2>& a, float b)
+    template <typename T, int N1, int N2, typename S> matrix_stack<T, N1, N2>& operator*=(matrix_stack<T, N1, N2>& a, S b)
     {
         a.data *= b;
         return a;
@@ -671,25 +592,25 @@ namespace cgp
         return res;
     }
 
-    template <typename T, int N1, int N2> matrix_stack<T, N1, N2> operator*(matrix_stack<T, N1, N2> const& a, float b)
+    template <typename T, int N1, int N2, typename S> matrix_stack<T, N1, N2> operator*(matrix_stack<T, N1, N2> const& a, S b)
     {
         matrix_stack<T, N1, N2> res;
         res.data = a.data * b;
         return res;
     }
-    template <typename T, int N1, int N2> matrix_stack<T, N1, N2> operator*(float a, matrix_stack<T, N1, N2> const& b)
+    template <typename T, int N1, int N2, typename S> matrix_stack<T, N1, N2> operator*(S a, matrix_stack<T, N1, N2> const& b)
     {
         matrix_stack<T, N1, N2> res;
         res.data = a * b.data;
         return res;
     }
 
-    template <typename T, int N1, int N2> matrix_stack<T, N1, N2>& operator/=(matrix_stack<T, N1, N2>& a, float b)
+    template <typename T, int N1, int N2, typename S> matrix_stack<T, N1, N2>& operator/=(matrix_stack<T, N1, N2>& a, S b)
     {
         a.data /= b;
         return a;
     }
-    template <typename T, int N1, int N2> matrix_stack<T, N1, N2>  operator/(matrix_stack<T, N1, N2> const& a, float b)
+    template <typename T, int N1, int N2, typename S> matrix_stack<T, N1, N2>  operator/(matrix_stack<T, N1, N2> const& a, S b)
     {
         matrix_stack<T, N1, N2> res;
         res.data = a.data / b;
@@ -714,10 +635,10 @@ namespace cgp
     {
         numarray_stack<T, N1> res = {};
         for (int k1 = 0; k1 < N1; ++k1) {
-            auto& current = res.at_unsafe(k1);
+            auto& current = res.coeff(k1);
             for (int k2 = 0; k2 < N2; ++k2)
                 current += a.at(k1,k2) * b.at(k2);
-            res.at_unsafe(k1) = current;
+            res.coeff(k1) = current;
         }
         return res;
     }
@@ -744,7 +665,7 @@ namespace cgp
                 int k2_res = 0;
                 for (int k2 = 0; k2 < N2; ++k2) {
                     if (k2 != idx2){
-                        res.at_unsafe(k1_res, k2_res) = at_unsafe(k1, k2);
+                        res.coeff(k1_res, k2_res) = coeff(k1, k2);
                         ++k2_res;
                     }
                 }
@@ -761,7 +682,7 @@ namespace cgp
         int const N = std::min(N1, N2);
         matrix_stack<T, N1, N2> id = {};
         for (int k = 0; k < N; ++k)
-            id.at_unsafe(k, k) = cgp_trait<T>::one();
+            id.coeff(k, k) = cgp_trait<T>::one();
         return id;
     }
 
@@ -771,7 +692,7 @@ namespace cgp
         int const N = std::min(N1, N2);
         matrix_stack<T, N1, N2> m = {};
         for (int k = 0; k < N; ++k)
-            m.at_unsafe(k, k) = arg[k];
+            m.coeff(k, k) = arg[k];
         return m;
     }
 
@@ -783,7 +704,7 @@ namespace cgp
         T s{};
         for(int k1=0; k1<N1; ++k1)
             for(int k2=0; k2<N2; ++k2)
-                s += m.at_unsafe(k1,k2);
+                s += m.coeff(k1,k2) * m.coeff(k1,k2);
 
         return sqrt(s);
     }

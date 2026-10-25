@@ -109,7 +109,7 @@ void joint_picking_mouse_move(joint_picking_state& picking,
         }
 
         vec3 const translation = picking.p_current - picking.p_clicked;
-        vec3 local_translation = conjugate(q_parent) * translation;
+        vec3 local_translation = rotation_transform(conjugate(q_parent)) * translation;
 
         interactive_deformation[picking.selected_joint].set_block_translation(local_translation);
     }

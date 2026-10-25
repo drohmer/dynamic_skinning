@@ -90,7 +90,7 @@ template <typename T>
 size_t size_in_memory(std::vector<T> const& v)
 {
     size_t s = 0;
-    for (int k = 0; k < v.size(); ++k)
+    for (size_t k = 0; k < v.size(); ++k)
         s += size_in_memory(v[k]);
     return s;
 }
@@ -98,6 +98,7 @@ size_t size_in_memory(std::vector<T> const& v)
 template <typename T>
 auto const* ptr(std::vector<T> const& v)
 {
+    assert_cgp(v.size()>0, "Cannot get ptr of an empty vector");
     using cgp::ptr;
     return ptr(v[0]);
 }

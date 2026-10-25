@@ -35,6 +35,7 @@ void gpu_skinning_initialize(gpu_skinning_state& state,
                              animated_model_structure const& model,
                              std::string const& mesh_name,
                              dynamic_skinning_state const& ds_state,
+                             delayed_lbs_state const& dlbs_state,
                              mesh_drawable& drawable)
 {
     // Clean up previous state if re-initializing
@@ -43,6 +44,8 @@ void gpu_skinning_initialize(gpu_skinning_state& state,
         if (state.joint_global_tex.id)       glDeleteTextures(1, &state.joint_global_tex.id);
         if (state.filtered_velocity_tex.id)  glDeleteTextures(1, &state.filtered_velocity_tex.id);
         if (state.hier_weights_tex.id)       glDeleteTextures(1, &state.hier_weights_tex.id);
+        if (state.history_tex.id)            glDeleteTextures(1, &state.history_tex.id);
+        if (state.dlbs_joint_tex.id)         glDeleteTextures(1, &state.dlbs_joint_tex.id);
         state = gpu_skinning_state();
     }
 
@@ -60,6 +63,20 @@ void gpu_skinning_initialize(gpu_skinning_state& state,
     create_rgba32f_texture_2d(state.skinning_matrices_tex, 4, state.N_joints);
     create_rgba32f_texture_2d(state.joint_global_tex, 4, state.N_joints);
     create_rgba32f_texture_2d(state.filtered_velocity_tex, 1, state.N_joints);  // 1 x N_joints
+    create_rgba32f_texture_2d(state.history_tex, 4 * delayed_lbs_state::N_history, state.N_joints);
+
+    // Static data of the delayed LBS per joint: texel (col, j) = column col of B_j^-1, texel (4, j) = (parent, d_j)
+    {
+        std::vector<float> data(5 * state.N_joints * 4, 0.0f);
+        for (int j = 0; j < state.N_joints; ++j) {
+            for (int col = 0; col < 4; ++col)
+                for (int row = 0; row < 4; ++row)
+                    data[(j * 5 + col) * 4 + row] = dlbs_state.inverse_bind[j](row, col);
+            data[(j * 5 + 4) * 4 + 0] = static_cast<float>(model.skeleton.parent_index[j]);
+            data[(j * 5 + 4) * 4 + 1] = dlbs_state.joint_distance[j];
+        }
+        create_rgba32f_texture_2d(state.dlbs_joint_tex, 5, state.N_joints, data.data());
+    }
 
     // ---- 3. Create & fill static hier_weights_tex (tiled 2D) ----
     {
@@ -84,7 +101,7 @@ void gpu_skinning_initialize(gpu_skinning_state& state,
                 data[offset + 0] = static_cast<float>(joints[k]);
                 data[offset + 1] = weights[k];
                 data[offset + 2] = ds_state.weight_bend[v];
-                data[offset + 3] = 0.0f;
+                data[offset + 3] = static_cast<float>(ds_state.center_joints_per_vertex[v][k]);
             }
         }
         create_rgba32f_texture_2d(state.hier_weights_tex, tex_w, tex_h, data.data());
@@ -131,6 +148,12 @@ void gpu_skinning_initialize(gpu_skinning_state& state,
 
         drawable.initialize_supplementary_data_on_gpu(joint_indices_vbo, 4);
         drawable.initialize_supplementary_data_on_gpu(joint_weights_vbo, 5);
+
+        // Distance d_i along the skeleton (delayed LBS)
+        numarray<vec2> delay_distance_vbo(state.N_vertex);
+        for (int v = 0; v < state.N_vertex; ++v)
+            delay_distance_vbo[v] = {dlbs_state.distance[v], 0.0f};
+        drawable.initialize_supplementary_data_on_gpu(delay_distance_vbo, 6);
     }
 
     // ---- 5. Initialize angular velocity trackers (one per joint) ----
@@ -152,6 +175,7 @@ void gpu_skinning_update(gpu_skinning_state& state,
                          animated_model_structure const& model,
                          std::string const& mesh_name,
                          dynamic_skinning_parameters const& params,
+                         delayed_lbs_state const& dlbs_state,
                          float time)
 {
     if (!state.initialized) return;
@@ -226,6 +250,24 @@ void gpu_skinning_update(gpu_skinning_state& state,
         glBindTexture(GL_TEXTURE_2D, 0);
     }
 
+    // ---- 4. Upload the history of local joint matrices (delayed LBS) ----
+    //    texel (4 k + col, j) = column col of L_j for the k-th stored pose
+    if (params.delay_active) {
+        int const N = delayed_lbs_state::N_history;
+        std::vector<float> history_data(4 * N * state.N_joints * 4, 0.0f);
+        for (int k = 0; k < N; ++k) {
+            auto const& L = dlbs_state.history[k];
+            for (int j = 0; j < state.N_joints; ++j)
+                for (int col = 0; col < 4; ++col)
+                    for (int row = 0; row < 4; ++row)
+                        history_data[((j * 4 * N) + 4 * k + col) * 4 + row] = L[j](row, col);
+        }
+        glBindTexture(GL_TEXTURE_2D, state.history_tex.id);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 4 * N, state.N_joints,
+                        GL_RGBA, GL_FLOAT, history_data.data());
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
     auto t1 = clock::now();
     state.timing_upload_ms = std::chrono::duration<float, std::milli>(t1 - t0).count();
 }
@@ -239,6 +281,7 @@ void gpu_skinning_draw(gpu_skinning_state& state,
                        mesh_drawable& drawable,
                        environment_structure const& env,
                        dynamic_skinning_parameters const& params,
+                       delayed_lbs_state const& dlbs_state,
                        bool display_bend_weights)
 {
     if (!state.initialized) return;
@@ -253,6 +296,8 @@ void gpu_skinning_draw(gpu_skinning_state& state,
     drawable.supplementary_texture["joint_global_tex"]       = state.joint_global_tex;
     drawable.supplementary_texture["filtered_velocity_tex"]  = state.filtered_velocity_tex;
     drawable.supplementary_texture["hier_weights_tex"]       = state.hier_weights_tex;
+    drawable.supplementary_texture["history_tex"]            = state.history_tex;
+    drawable.supplementary_texture["dlbs_joint_tex"]         = state.dlbs_joint_tex;
 
     glUseProgram(state.skinning_shader.id);
 
@@ -262,6 +307,10 @@ void gpu_skinning_draw(gpu_skinning_state& state,
     opengl_uniform(state.skinning_shader, "hier_tile_w", state.HIER_TILE_W);
     opengl_uniform(state.skinning_shader, "bend_factor", bend_factor_val);
     opengl_uniform(state.skinning_shader, "display_bend_weights", display_bend_weights ? 1 : 0);
+    opengl_uniform(state.skinning_shader, "dlbs_active", params.delay_active ? 1 : 0);
+    opengl_uniform(state.skinning_shader, "dlbs_head", dlbs_state.head);
+    opengl_uniform(state.skinning_shader, "dlbs_N", delayed_lbs_state::N_history);
+    opengl_uniform(state.skinning_shader, "dlbs_steps_per_distance", delayed_lbs_steps_per_distance(params));
 
     draw(drawable, env);
 

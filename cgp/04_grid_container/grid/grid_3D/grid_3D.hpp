@@ -14,7 +14,7 @@ namespace cgp
 
 /** Container for 3D-grid like structure storing numerical element
 *
-* The grid_3D structure provide convenient access for 3D-grid organization where an element can be queried as grid_3D(i,j).
+* The grid_3D structure provide convenient access for 3D-grid organization where an element can be queried as grid_3D(i,j,k).
 * Elements of grid_3D are stored contiguously in heap memory and remain fully compatible with std::vector and pointers.
 **/
 template <typename T>
@@ -26,7 +26,7 @@ struct grid_3D
     numarray<T> data;
 
     /** Constructors */
-    grid_3D();                 // Emtpy grid
+    grid_3D();                 // Empty grid
     grid_3D(int size);         // Generate a grid of dimension size x size x size
     grid_3D(int3 const& size); // Generate a grid of dimension size.x size.y size.z
     grid_3D(int size_1, int size_2, int size_3); // Generate a grid of dimension size_1 x size_2 x size_3
@@ -35,7 +35,7 @@ struct grid_3D
     * \note: the size of the 3D-buffer must satisfy arg.size = size_1 * size_2 * size_3 */
     static grid_3D<T> from_array(numarray<T> const& arg, int size_1, int size_2, int size_3);
 
-    /** Remove all elements from the grid_2D */
+    /** Remove all elements from the grid_3D */
     void clear();
     /** Total number of elements size = dimension[0] * dimension[1] * dimension[2] */
     int size() const;
@@ -68,10 +68,10 @@ struct grid_3D
     typename std::vector<T>::const_iterator cbegin() const;
     typename std::vector<T>::const_iterator cend() const;
 
-    T const& at_unsafe(int index) const;
-    T & at_unsafe(int index);           
-    T const& at_unsafe(int index1, int index2, int index3) const;
-    T & at_unsafe(int index1, int index2, int index3);
+    T const& coeff(int index) const;
+    T & coeff(int index);           
+    T const& coeff(int index1, int index2, int index3) const;
+    T & coeff(int index1, int index2, int index3);
 
 };
 
@@ -182,7 +182,7 @@ void grid_3D<T>::fill(T const& value)
 template <typename T>
 grid_3D<T> grid_3D<T>::from_array(numarray<T> const& arg, int size_1, int size_2, int size_3)
 {
-    assert_cgp(arg.size()==size_1*size_2*size_3, "Incoherent size to generate grid_2D");
+    assert_cgp(arg.size()==size_1*size_2*size_3, "Incoherent size to generate grid_3D");
 
     grid_3D<T> b(size_1, size_2, size_3);
     b.data = arg;
@@ -200,42 +200,18 @@ void grid_3D<T>::clear()
 template <typename T>
 static void check_index_bounds(int index1, int index2, int index3, grid_3D<T> const& data)
 {
-#ifndef cgp_NO_DEBUG
-    int const N1 = data.dimension.x;
-    int const N2 = data.dimension.y;
-    int const N3 = data.dimension.z;
-    assert_cgp_no_msg(N1>=0 && N2>=0 && N3>=0);
-    if (index1 < 0 || index2 < 0 || index3 < 0 || index1 >= N1 || index2 >= N2 || index3 >= N3)
-    {
-        std::string msg = "\n";
-
-        msg += "\t> Try to access grid_3D(" + str(index1) + "," + str(index2) + "," + str(index3) + ")\n";
-        msg += "\t>    - grid_3D has dimension = (" + str(N1) + "," + str(N2) + "," + str(N3) + ")\n";
-        msg += "\t>    - Type of grid_3D: " + type_str(data) + "\n";
-
-        if (index1 < 0 || index2 < 0 || index3 < 0)
-        {
-            msg += "\t> Buffer cannot be access with negative index.\n";
-        }
-        else if (N1 == 0 || N2 == 0 || N3 == 0)
-        {
-            msg += "\t> The buffer is empty, its elements cannot be accessed.\n";
-        }
-        else if (index1 == N1 || index2 == N2 || index3 == N3)
-        {
-            msg += "\t> Index reached the maximal size of the buffer \n";
-            msg += "\t> The maximal possible indexes should be (" + str(N1 - 1) + "," + str(N2 - 1) + "," + str(N3 - 1) + ") \n";
-        }
-        else if (index1 >= N1 || index2 >= N2 || index3 >= N3)
-        {
-            msg += "\t> Exceeded buffer dimension \n";
-        }
-
-
-        msg += "\n\t  The function and variable that generated this error can be found in analysis the Call Stack.\n";
-
-        error_cgp(msg);
-    }
+#ifndef CGP_NO_DEBUG
+    int const N1 = int(data.dimension.x);
+    int const N2 = int(data.dimension.y);
+    int const N3 = int(data.dimension.z);
+    if (index1 < 0 || index1 >= N1)
+        error_cgp(index_out_of_bounds_message(index1, N1, "x", type_str(data)));
+    if (index2 < 0 || index2 >= N2)
+        error_cgp(index_out_of_bounds_message(index2, N2, "y", type_str(data)));
+    if (index3 < 0 || index3 >= N3)
+        error_cgp(index_out_of_bounds_message(index3, N3, "z", type_str(data)));
+#else
+        (void)index1; (void)index2; (void)index3; (void)data;
 #endif
 }
 
@@ -365,6 +341,7 @@ template <typename T> grid_3D<T>& operator+=(grid_3D<T>& a, grid_3D<T> const& b)
 {
     assert_cgp( is_equal(a.dimension,b.dimension), "Dimension do not agree: a:"+str(a.dimension)+", b:"+str(b.dimension) );
     a.data += b.data;
+    return a;
 }
 template <typename T> grid_3D<T>& operator+=(grid_3D<T>& a, T const& b)
 {
@@ -418,8 +395,8 @@ template <typename T> grid_3D<T>  operator-(grid_3D<T> const& a, T const& b)
 }
 template <typename T> grid_3D<T>  operator-(T const& a, grid_3D<T> const& b)
 {
-    grid_3D<T> res(a.dimension);
-    res.data = a-b.data;
+    grid_3D<T> res(b.dimension);
+    res.data = sub(a, b.data);
     return res;
 }
 
@@ -490,28 +467,28 @@ template <typename T> grid_3D<T>  operator/(float a, grid_3D<T> const& b)
 
 
 template <typename T>
-T const& grid_3D<T>::at_unsafe(int index) const
+T const& grid_3D<T>::coeff(int index) const
 {
-    return data.at_unsafe(index);
+    return data.coeff(index);
 }
 
 
 template <typename T>
-T & grid_3D<T>::at_unsafe(int index)
+T & grid_3D<T>::coeff(int index)
 {
-    return data.at_unsafe(index);
+    return data.coeff(index);
 }
 
 template <typename T>
-T const& grid_3D<T>::at_unsafe(int index1, int index2, int index3) const
+T const& grid_3D<T>::coeff(int index1, int index2, int index3) const
 {
-    return data.at_unsafe(offset_grid(index1, index2, index3, dimension.x, dimension.y));
+    return data.coeff(offset_grid(index1, index2, index3, dimension.x, dimension.y));
 }
 
 template <typename T>
-T & grid_3D<T>::at_unsafe(int index1, int index2, int index3)
+T & grid_3D<T>::coeff(int index1, int index2, int index3)
 {
-    return data.at_unsafe(offset_grid(index1, index2, index3, dimension.x, dimension.y));
+    return data.coeff(offset_grid(index1, index2, index3, dimension.x, dimension.y));
 }
 
 }

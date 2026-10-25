@@ -12,6 +12,8 @@ file(GLOB_RECURSE SRC_FILES
     "${CMAKE_CURRENT_LIST_DIR}/cgp/*.[ch]pp"
     "${CMAKE_CURRENT_LIST_DIR}/shaders/*.glsl"
 )
+# Unit tests of the cgp library are not part of the application
+list(FILTER SRC_FILES EXCLUDE REGEX "/cgp/.*/test/")
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 
@@ -30,6 +32,8 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     CGP_ERROR_EXCEPTION           # Throw exceptions on errors (comment to abort instead)
     # CGP_NO_DEBUG                # Uncomment to disable assertions
 )
+# Assertions (bound checks) only in Debug: they are costly on the vec3 operations of the CPU skinning
+target_compile_definitions(${PROJECT_NAME} PRIVATE $<$<NOT:$<CONFIG:Debug>>:CGP_NO_DEBUG>)
 
 # Compiler standard
 set_target_properties(${PROJECT_NAME} PROPERTIES

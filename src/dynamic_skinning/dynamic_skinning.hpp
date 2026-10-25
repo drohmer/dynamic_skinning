@@ -16,6 +16,10 @@ struct dynamic_skinning_parameters {
     float attenuation     = 1.5f;
     float frequency_slope = 0.0f;
 
+    // Delayed LBS (dLBS): the skinning uses the pose of the skeleton at time t - d_i / c
+    bool delay_active  = false;
+    float delay_speed  = 2.0f;   // propagation speed c (model units per second, the model fits in [-1, 1])
+
     float bend_max_angle = 3.14159f;
     float bend_magnitude = 1.0f;
 
@@ -34,6 +38,7 @@ struct dynamic_skinning_state {
     // For each vertex, which joints influence it and with what hierarchical weight
     cgp::numarray<cgp::numarray<int>>   joints_per_vertex;       // joints_per_vertex[i] = list of joints j influencing vertex i
     cgp::numarray<cgp::numarray<float>> hierarchical_weights;     // hierarchical_weights[i][k] = β_ij for the k-th joint of vertex i
+    cgp::numarray<cgp::numarray<int>>   center_joints_per_vertex; // center of the bend rotation for the k-th joint of vertex i (j itself, or a flexible origin)
 
     // Filtered angular velocity per joint (recomputed each frame, phase 1)
     cgp::numarray<cgp::vec3> filtered_angular_velocity;

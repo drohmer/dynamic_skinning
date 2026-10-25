@@ -14,7 +14,7 @@ namespace cgp
         case GL_RGBA8:
             return GL_RGBA;
         case GL_DEPTH_COMPONENT:
-            return GL_DEPTH_COMPONENT24;
+            return GL_DEPTH_COMPONENT;
         case GL_DEPTH_COMPONENT32F:
             return GL_DEPTH_COMPONENT32F;
         default:
@@ -33,6 +33,8 @@ namespace cgp
             return GL_FLOAT;
         case GL_DEPTH_COMPONENT:
             return GL_UNSIGNED_INT;
+        case GL_DEPTH_COMPONENT32F:
+            return GL_FLOAT;
         default:
             error_cgp("Unknown format");
         }
@@ -158,6 +160,14 @@ namespace cgp
         assert_cgp_no_msg(h == y_pos.width && h == y_pos.height);
         assert_cgp_no_msg(h == z_neg.width && h == z_neg.height);
         assert_cgp_no_msg(h == z_pos.width && h == z_pos.height);
+
+        // All 6 faces must share the same color_type: a single format/component pair is
+        //  used for the whole cubemap, so a mismatched face would be read with the wrong
+        //  byte count (corrupted upload or out-of-bounds read of the image data).
+        assert_cgp(x_pos.color_type == color_type && y_neg.color_type == color_type &&
+                   y_pos.color_type == color_type && z_neg.color_type == color_type &&
+                   z_pos.color_type == color_type,
+                   "All 6 cubemap faces must share the same color_type (all RGB or all RGBA)");
         
         
         // Send images to GPU as cubemap
@@ -239,8 +249,11 @@ namespace cgp
         if(im.color_type==image_color_type::rgba){
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, im.width, im.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptr(im.data)); opengl_check;
         }
-        if(im.color_type==image_color_type::rgb){
+        else if(im.color_type==image_color_type::rgb){
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, im.width, im.height, 0, GL_RGB, GL_UNSIGNED_BYTE, ptr(im.data)); opengl_check;
+        }
+        else {
+            error_cgp("Unsupported image color_type for texture upload (expected RGB or RGBA)");
         }
         glGenerateMipmap(GL_TEXTURE_2D); opengl_check;
 

@@ -2,6 +2,9 @@
 
 #include "cgp/04_grid_container/matrix_stack/matrix_stack.hpp"
 #include "cgp/05_vec/vec.hpp"
+// mat3::remove_row_column returns a 2x2 matrix (= mat2), so the mat2 specialization
+//  must be visible here before matrix_stack<float,2,2> is used.
+#include "cgp/06_mat/mat2/mat2.hpp"
 
 
 // mat3 is an alias on matrix_stack<float, 3, 3>
@@ -18,7 +21,7 @@ namespace cgp
 
     /** Container for 3x3 matrix of floats
     *
-    * Elements of mat2 are stored contiguously in stack memory as array of array
+    * Elements of mat3 are stored contiguously in stack memory as array of array
     * Elements are stored along rows
     * matrix[0]     ( xx:(0,0) xy:(0,1) xz:(0,2) )
     * matrix[1]     ( yx:(1,0) yy:(1,1) yz:(1,2) )
@@ -116,8 +119,24 @@ namespace cgp
         inline float const& at(int k1, int k2) const;
         inline float& at(int k1, int k2);
 
+        inline float const& coeff(int k1, int k2) const { return data.coeff(k1).coeff(k2); }
+        inline float& coeff(int k1, int k2)             { return data.coeff(k1).coeff(k2); }
+
+        inline vec3 const& coeff(int k1) const { return data.coeff(k1); }
+        inline vec3& coeff(int k1)             { return data.coeff(k1); }
+
         inline float const& at_offset(int offset) const;
         inline float& at_offset(int offset);
+
+        inline float const& at_offset_unsafe(int offset) const { return begin()[offset]; }
+        inline float& at_offset_unsafe(int offset)             { return begin()[offset]; }
+
+        // Remove one row and one column (returns a 2x2 matrix)
+        matrix_stack<float, 2, 2> remove_row_column(int k1, int k2) const;
+
+        // Copy a smaller block into this matrix at a given offset (default top-left)
+        template <int N1_arg, int N2_arg>
+        mat3& set_block(matrix_stack<float, N1_arg, N2_arg> const& block, int offset_1 = 0, int offset_2 = 0);
 
 
         /** Iterators
@@ -147,16 +166,18 @@ namespace cgp
         int const N2m = std::min(3, N2_arg);
         for (int k1 = 0; k1 < N1m; ++k1)
             for (int k2 = 0; k2 < N2m; ++k2)
-                at(k1, k2) = M.at(k1, k2);
+                coeff(k1, k2) = M.coeff(k1, k2);
     }
 
     float const& mat3::at(int k1, int k2) const
     {
-        return *(begin() + k2 + 3 * k1);
+        check_index_bounds(k1, k2, *this);
+        return coeff(k1, k2);
     }
     float& mat3::at(int k1, int k2)
     {
-        return *(begin() + k2 + 3 * k1);
+        check_index_bounds(k1, k2, *this);
+        return coeff(k1, k2);
     }
 
     vec3 const& mat3::at(int k2) const
@@ -172,9 +193,39 @@ namespace cgp
     {
         return *(begin() + offset);
     }
-    float& mat3::at_offset(int offset) 
+    float& mat3::at_offset(int offset)
     {
         return *(begin() + offset);
+    }
+
+    inline matrix_stack<float, 2, 2> mat3::remove_row_column(int idx1, int idx2) const
+    {
+        assert_cgp((idx1 < 3) && (idx2 < 3), "Incorrect index for removing row and column to matrix");
+        matrix_stack<float, 2, 2> res;
+        int k1_res = 0;
+        for (int k1 = 0; k1 < 3; ++k1) {
+            if (k1 != idx1) {
+                int k2_res = 0;
+                for (int k2 = 0; k2 < 3; ++k2) {
+                    if (k2 != idx2) { res.coeff(k1_res, k2_res) = coeff(k1, k2); ++k2_res; }
+                }
+                ++k1_res;
+            }
+        }
+        return res;
+    }
+
+    template <int N1_arg, int N2_arg>
+    mat3& mat3::set_block(matrix_stack<float, N1_arg, N2_arg> const& block, int offset_1, int offset_2)
+    {
+        static_assert(N1_arg <= 3, "Block size is too large for the current matrix");
+        static_assert(N2_arg <= 3, "Block size is too large for the current matrix");
+        assert_cgp(N1_arg + offset_1 <= 3, "Block size exceed current matrix size");
+        assert_cgp(N2_arg + offset_2 <= 3, "Block size exceed current matrix size");
+        for (int k1 = 0; k1 < N1_arg; ++k1)
+            for (int k2 = 0; k2 < N2_arg; ++k2)
+                coeff(k1 + offset_1, k2 + offset_2) = block.coeff(k1, k2);
+        return *this;
     }
 
     float* mat3::begin()

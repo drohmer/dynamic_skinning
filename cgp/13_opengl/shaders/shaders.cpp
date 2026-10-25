@@ -43,14 +43,17 @@ namespace cgp
 
     void opengl_shader_structure::load(std::string const& vertex_shader_path, std::string const& fragment_shader_path, bool adapt_opengles)
     {
+        // Note: the previous program is NOT deleted here. opengl_shader_structure is copied by value
+        //  (ex. a mesh_drawable receives a copy of the shared default shader), deleting it would
+        //  destroy the program still used by the other drawables. Call clear() explicitly if needed.
         id = opengl_load_shader(vertex_shader_path, fragment_shader_path, adapt_opengles);
     }
 
     void opengl_shader_structure::load_from_inline_text(std::string const& vertex_shader_text, std::string const& fragment_shader_text, bool* load_shader_ok)
     {
-        if (id != 0) {
-            std::cout << " Warning: try to load a shader (" << vertex_shader_text << "," << fragment_shader_text << ") on a non empty shader_structure" << std::endl;
-        }
+        // Note: the previous program is NOT deleted here. opengl_shader_structure is copied by value
+        //  (ex. a mesh_drawable receives a copy of the shared default shader), deleting it would
+        //  destroy the program still used by the other drawables. Call clear() explicitly if needed.
 #ifndef __EMSCRIPTEN__
         id = opengl_load_shader_from_text(vertex_shader_text, fragment_shader_text, load_shader_ok);
 #else
@@ -62,6 +65,15 @@ namespace cgp
 #endif
     }
 
+
+    void opengl_shader_structure::clear()
+    {
+        if (id != 0) {
+            glDeleteProgram(id); opengl_check;
+            cache_uniform_location.clear(id); // purge the stale entries of this program id
+            id = 0;
+        }
+    }
 
     GLint opengl_shader_structure::query_uniform_location(std::string const& uniform_name) const
     {
@@ -160,6 +172,8 @@ namespace cgp
 
         if (!vertex_ok || !fragment_ok) {
             std::cout << "Error compiling shader" << std::endl;
+            if (vertex_ok)   glDeleteShader(vertex_shader_id);
+            if (fragment_ok) glDeleteShader(fragment_shader_id);
             if(load_shader_ok!=nullptr)
                 *load_shader_ok = false;
             return 0;
@@ -187,9 +201,13 @@ namespace cgp
             return 0;
         }
 
-        // Shader can be detached.
+        // Shader can be detached and deleted.
+        //  glDetachShader alone does not free the shader objects: they must be
+        //  deleted explicitly once linked into the program, otherwise they leak.
         glDetachShader( program_id, vertex_shader_id);
         glDetachShader( program_id, fragment_shader_id);
+        glDeleteShader( vertex_shader_id);
+        glDeleteShader( fragment_shader_id);
 
         if (load_shader_ok != nullptr)
             *load_shader_ok = true;
@@ -230,8 +248,6 @@ namespace cgp
             // #version 330 core => #version 300 es + precision mediump float;
             replace_header_for_opengles(vertex_shader_text);
             replace_header_for_opengles(fragment_shader_text);
-
-            std::cout << vertex_shader_text << std::endl;
         }
 #endif
         
@@ -251,6 +267,7 @@ namespace cgp
         if (fragment_shader_valid == false) {
             std::cout << "===> Failed to compile the Fragment Shader [" << fragment_shader_path << "]" << std::endl;
             std::cout << "The error message from the compiler should be listed above. The program will stop." << std::endl;
+            glDeleteShader(vertex_shader_id); // the vertex shader compiled successfully: free it before stopping
             error_cgp("Failed to compile fragment shader " + fragment_shader_path);
         }
 
@@ -276,9 +293,11 @@ namespace cgp
         }
 
 
-        // Shader can be detached.
+        // Shader can be detached and deleted (glDetachShader alone does not free them).
         glDetachShader(program_id, vertex_shader_id);
         glDetachShader(program_id, fragment_shader_id);
+        glDeleteShader(vertex_shader_id);
+        glDeleteShader(fragment_shader_id);
 
 
         // Debug info

@@ -7,10 +7,7 @@ namespace cgp
 {
 	void camera_controller_orbit::action_mouse_move()
 	{
-		// Preconditions
-		assert_cgp_no_msg(inputs != nullptr);
-		assert_cgp_no_msg(window != nullptr);
-		if (!is_active) return;
+		if (!is_ready()) return;
 
 		vec2 const& p1 = inputs->mouse.position.current;
 		vec2 const& p0 = inputs->mouse.position.previous;
@@ -25,21 +22,18 @@ namespace cgp
 			if (click_left && !ctrl)     // Rotation of the camera around its center
 				camera_model.manipulator_rotate_arcball(p0, p1);
 			else if (click_left && ctrl) // Translate/Pan the camera in the viewspace plane
-				camera_model.manipulator_translate_in_plane(p1 - p0);
+				camera_model.manipulator_translate_in_plane(p0 - p1);
 			else if (click_right && !ctrl) // Move the camera closer/further with respect to its center
 				camera_model.manipulator_scale_distance_to_center((p1 - p0).y);
 			else if (click_right && ctrl) // Translate the camera center in front/back
-				camera_model.manipulator_translate_front((p1 - p0).y);
+				camera_model.manipulator_translate_front((p0 - p1).y);
 		}
 
 	}
 
 	void camera_controller_orbit::idle_frame()
 	{
-		// Preconditions
-		assert_cgp_no_msg(inputs != nullptr);
-		assert_cgp_no_msg(window != nullptr);
-		if (!is_active) return;
+		if (!is_ready()) return;
 
 		float const angle_magnitude = inputs->time_interval;
 		if (inputs->keyboard.left || inputs->keyboard.is_pressed(GLFW_KEY_R)) {

@@ -36,17 +36,25 @@ namespace cgp {
 		opengl_fbo_mode mode = opengl_fbo_mode::image; 
 		
 		// ID of the FBO
-		GLuint id; 
+		GLuint id = 0; 
 
 		// Depth buffer
-		GLuint depth_buffer_id; 
+		GLuint depth_buffer_id = 0; 
 
 		// Texture storing the rendering in this FBO
 		opengl_texture_image_structure texture;
 
 		// Size of the texture
-		int width;
-		int height;
+		int width = 0;
+		int height = 0;
+
+		// Emscripten/WebGL depth-FBO requires a dummy color attachment (WebGL mandates a
+		//  complete FBO). This ID stores the dummy texture so it can be tracked for cleanup.
+		GLuint emscripten_color_attachment_id = 0;
+
+		// Viewport active at bind() time, saved so unbind() can restore it.
+		//  mutable because bind()/unbind() are const.
+		mutable GLint viewport_backup[4] = {0, 0, 0, 0};
 
 		// Initialize the ids and the texture
 		//  This function must be called before any rendering pass

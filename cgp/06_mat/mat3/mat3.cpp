@@ -81,29 +81,29 @@ namespace cgp
     vec3 const& mat3::operator[](int k2) const
     {
         check_index_bounds(k2, *this);
-        return at(k2);
+        return coeff(k2);
     }
     vec3& mat3::operator[](int k2)
     {
         check_index_bounds(k2, *this);
-        return at(k2);
+        return coeff(k2);
     }
 
     vec3 const& mat3::operator()(int k2) const
     {
         check_index_bounds(k2, *this);
-        return at(k2);
+        return coeff(k2);
     }
     vec3& mat3::operator()(int k2)
     {
         check_index_bounds(k2, *this);
-        return at(k2);
+        return coeff(k2);
     }
 
     float const& mat3::operator()(int k1, int k2) const
     {
         check_index_bounds(k1,k2, *this);
-        return at(k1,k2);
+        return coeff(k1,k2);
     }
     float& mat3::operator()(int k1, int k2)
     {
@@ -131,7 +131,7 @@ namespace cgp
 
     
     mat3 mat3::build_diagonal(float value) { return mat3(value, 0, 0, 0,value,0, 0,0,value); }
-    mat3 mat3::build_diagonal(vec3 const& arg) { return mat3(arg.x, 0, 0, 0,arg.y,0, 0,arg.z,0); }
+    mat3 mat3::build_diagonal(vec3 const& arg) { return mat3(arg.x, 0, 0, 0,arg.y,0, 0,0,arg.z); }
     mat3 mat3::build_diagonal(float x, float y, float z) { return mat3(x, 0, 0, 0,y,0, 0,0,z); }
 
     mat3 mat3::build_scaling(float value) { return build_diagonal(value); }

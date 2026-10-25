@@ -53,7 +53,7 @@ namespace cgp
 		affine_rts hierarchy_transform_model;
 
 		// Additional generic matrix provided to set the model matrix (initialized to identity)
-		mat4 supplementary_model_matrix; 
+		mat4 supplementary_model_matrix = mat4::build_identity(); 
 
 		// The model matrix sent to the shader is computed as
 		//  mat4 M = hierarchy_transform_model.matrix() * supplementary_model_matrix * model.matrix()
@@ -86,7 +86,7 @@ namespace cgp
 
 	// Main function used to draw a shape.
 	//  draw([mesh_drawable], environment);
-	void draw(mesh_drawable const& drawable, environment_generic_structure const& environment = environment_generic_structure(), int instance_count=1, bool expected_uniforms=true, uniform_generic_structure const& additional_uniforms = uniform_generic_structure(), GLenum draw_mode=GL_TRIANGLES);
+	void draw(mesh_drawable const& drawable, environment_generic_structure const& environment = environment_generic_structure(), int instance_count=1, bool expected_uniforms=true, uniform_generic_structure const& additional_uniforms = uniform_generic_structure(), GLenum draw_mode=GL_TRIANGLES, material_mesh_drawable_phong const* material_override=nullptr);
 
 	// Draw the same shape while activating the GL_POLYGON_OFFSET_LINE mode from OpenGL
 	void draw_wireframe(mesh_drawable const& drawable, environment_generic_structure const& environment = environment_generic_structure(), vec3 const& color = {0,0,1}, int instance_count = 1, bool expected_uniforms = true, uniform_generic_structure const& additional_uniforms = uniform_generic_structure());

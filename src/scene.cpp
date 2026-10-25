@@ -84,6 +84,11 @@ void scene_structure::load_model(std::string const& name)
 	if (name == "Clown") {
 		character.animated_model.animation["Swing"] = build_clown_swing(character.animated_model.skeleton);
 		character.set_current_animation("Swing");
+		// Flexible origins at the start of the arms and of the hat (paper, Sec. "Deformation origin control")
+		if (clown_flexible_origins) {
+			for (char const* joint : {"joint8", "joint11", "joint19"})
+				character.animated_model.flexible_origin_joints.insert(find_joint(character.animated_model.skeleton, joint));
+		}
 	}
 	if (name == "Spot") {
 		character.animated_model.animation["Head nod & twist"] = build_spot_head_nod_twist(character.animated_model.skeleton);
@@ -99,13 +104,19 @@ void scene_structure::load_model(std::string const& name)
 		character.animated_model.animation["Flight"] = build_dragon_flight(character.animated_model.skeleton, flap_frequency);
 		character.set_current_animation("Flight");
 	}
+	if (name == "Train") {
+		character.animated_model.animation["Bumps"] = build_train_bumps(character.animated_model.skeleton);
+		character.set_current_animation("Bumps");
+	}
 	if (name == "Cthulhu") {
 		character.animated_model.animation["Head shake"] = build_cthulhu_head_shake(character.animated_model.skeleton);
 		character.set_current_animation("Head shake");
 	}
 
 	// Normalize all models to [-1, 1] range
-	normalize_character(character);
+	normalization_transform const normalization = normalize_character(character);
+	if (name == "Train")
+		initialize_train_track(normalization);
 
 	// Camera: hard-coded presets per model
 	{
@@ -118,6 +129,7 @@ void scene_structure::load_model(std::string const& name)
 			{"Girafe",   {1.035f, 0.351f, 3.551f},  {0.000f, 0.100f, 0.050f},  3.659f, {0, 1, 0}},
 			{"Snail",    {1.600f, 0.700f, 2.900f},  {0.100f, 0.000f, 0.000f},   3.300f, {0, 1, 0}},
 			{"Spot",     {2.490f, 0.850f, -2.590f}, {0.000f, 0.100f, -0.100f}, 3.600f, {0, 1, 0}},
+			{"Train",    {0.850f, 0.350f, 1.500f},  {-0.050f, -0.020f, 0.000f}, 1.750f, {0, 1, 0}},
 		};
 		bool found = false;
 		for (auto& d : presets) {
@@ -137,10 +149,17 @@ void scene_structure::load_model(std::string const& name)
 	if (name == "Cthulhu")
 		use_gpu_skinning = true;
 
-	// Amplitude A and drag D: default values, smaller for Cthulhu (large wings and long tentacles)
+	// Amplitude A and drag D: default values, smaller for Cthulhu (large wings and long tentacles),
+	// larger drag for the Clown with local centers (only the extremities are deformed)
 	dynamic_skinning_parameters const ds_default;
 	ds_params.amplitude = (name == "Cthulhu") ? 0.08f : ds_default.amplitude;
 	ds_params.drag      = (name == "Cthulhu") ? 0.30f : ds_default.drag;
+	if (name == "Clown" && clown_flexible_origins)
+		ds_params.drag = 1.0f;
+
+	// Delayed LBS: shown with the train (faster propagation), off for the other models
+	ds_params.delay_active = (name == "Train");
+	ds_params.delay_speed = (name == "Train") ? 3.0f : ds_default.delay_speed;
 
 	reinitialize_after_model_change();
 }
@@ -151,6 +170,7 @@ void scene_structure::reinitialize_after_model_change()
 	// Initialize dynamic skinning on the first mesh
 	std::string first_mesh = character.animated_model.rigged_mesh.begin()->first;
 	dynamic_skinning_initialize(ds_state, character.animated_model, first_mesh);
+	delayed_lbs_initialize(dlbs_state, character.animated_model, first_mesh, ds_timer.t);
 
 	// Initialize interactive deformation (identity per joint)
 	int N_joints = character.animated_model.skeleton.size();
@@ -168,11 +188,53 @@ void scene_structure::reinitialize_after_model_change()
 	// Initialize GPU skinning
 	std::string first_mesh_gpu = character.animated_model.rigged_mesh.begin()->first;
 	gpu_skinning_initialize(gpu_state, character.animated_model, first_mesh_gpu,
-	                        ds_state, character.drawable[first_mesh_gpu]);
+	                        ds_state, dlbs_state, character.drawable[first_mesh_gpu]);
 
 	character.timer.start();
 	character.timer.stop();
 	animation_running = false;
+}
+
+
+void scene_structure::initialize_train_track(normalization_transform const& normalization)
+{
+	// Placement of the track relative to the train asset (as in the original scene, where the
+	// train was scaled by 0.2 and the track by 0.0025, then translated by (-10, -0.12, 0))
+	float const scaling_asset = 0.0025f / 0.2f;
+	vec3 const translation_asset = vec3{-10.0f, -0.12f, 0.0f} / 0.2f;
+	// Length of the repeated patterns in the track files
+	float const period_bars = 100.0f;
+	float const period_pillars = 582.353f;
+
+	struct { char const* file; vec3 color; float period; } const parts[] = {
+		{"train_rails.obj",   {0.55f, 0.55f, 0.6f},  period_bars},
+		{"train_bars.obj",    {0.45f, 0.3f, 0.2f},   period_bars},
+		{"train_pillars.obj", {0.75f, 0.72f, 0.68f}, period_pillars},
+	};
+
+	train_track.clear();
+	for (auto const& part : parts) {
+		track_part p;
+		p.drawable.initialize_data_on_gpu(mesh_load_file_obj(project::path + "assets/train/track/" + part.file));
+		p.drawable.material.color = part.color;
+		// Display coordinates: p' = s (scaling_asset p + translation_asset - center)
+		p.drawable.model.scaling = normalization.scaling * scaling_asset;
+		p.drawable.model.translation = normalization.scaling * (translation_asset - normalization.center);
+		p.period = normalization.scaling * scaling_asset * part.period;
+		train_track.push_back(p);
+	}
+}
+
+
+void scene_structure::draw_train_track()
+{
+	// The track scrolls backward (-x), wrapping around its repeated pattern
+	for (auto& part : train_track) {
+		vec3 const translation = part.drawable.model.translation;
+		part.drawable.model.translation.x -= std::fmod(train_speed * character.timer.t, part.period);
+		draw(part.drawable, environment);
+		part.drawable.model.translation = translation;
+	}
 }
 
 
@@ -269,6 +331,8 @@ void scene_structure::display_frame()
 		}
 		skeleton.update_joint_matrix_local_to_global();
 	}
+	// History of the poses for the delayed LBS
+	delayed_lbs_record(dlbs_state, character.animated_model, ds_timer.t);
 	auto ta1 = clock::now();
 	timing_animation.push(to_ms(ta1 - ta0));
 
@@ -284,7 +348,7 @@ void scene_structure::display_frame()
 		drawable.vbo_position.update(rigged_mesh.mesh_bind_pose.position);
 		drawable.vbo_normal.update(rigged_mesh.mesh_bind_pose.normal);
 
-		gpu_skinning_update(gpu_state, character.animated_model, first_mesh, ds_params, ds_timer.t);
+		gpu_skinning_update(gpu_state, character.animated_model, first_mesh, ds_params, dlbs_state, ds_timer.t);
 		timing_gpu_upload.push(gpu_state.timing_upload_ms);
 
 		// Weight visualization (skinning or hierarchical) on GPU path
@@ -304,7 +368,7 @@ void scene_structure::display_frame()
 		if (gui.display_surface) {
 			bool show_texture = gui.display_texture && (weight_display == weight_display_mode::none);
 			drawable.material.texture_settings.active = show_texture;
-			gpu_skinning_draw(gpu_state, drawable, environment, ds_params, show_bend_weights());
+			gpu_skinning_draw(gpu_state, drawable, environment, ds_params, dlbs_state, show_bend_weights());
 		}
 	}
 	else {
@@ -314,6 +378,11 @@ void scene_structure::display_frame()
 		auto tl0 = clock::now();
 		for (auto& rigged_mesh_entry : character.animated_model.rigged_mesh) {
 			character.animated_model.skinning_lbs(rigged_mesh_entry.first);
+		}
+		// Delayed LBS replaces p^LBS by p^dLBS (before the dynamic skinning deformation)
+		if (ds_params.delay_active) {
+			std::string first_mesh = character.animated_model.rigged_mesh.begin()->first;
+			delayed_lbs_apply(dlbs_state, ds_params, character.animated_model, first_mesh);
 		}
 		auto tl1 = clock::now();
 		timing_lbs.push(to_ms(tl1 - tl0));
@@ -376,6 +445,9 @@ void scene_structure::display_frame()
 		}
 	}
 
+	if (current_model_name == "Train")
+		draw_train_track();
+
 	// Clear depth buffer so skeleton and picking sphere render on top of mesh
 	glClear(GL_DEPTH_BUFFER_BIT);
 
@@ -386,6 +458,15 @@ void scene_structure::display_frame()
 		character.sk_drawable.display_joint_sphere = gui.display_skeleton_joints;
 		character.sk_drawable.display_segments = gui.display_skeleton_bones;
 		draw(character.sk_drawable, environment);
+	}
+
+	// Flexible origins (yellow spheres)
+	if (ds_params.active) {
+		sphere_picking.material.color = {1.0f, 0.9f, 0.1f};
+		for (int joint : character.animated_model.flexible_origin_joints) {
+			sphere_picking.model.translation = character.animated_model.skeleton.joint_matrix_global[joint].get_block_translation();
+			draw(sphere_picking, environment);
+		}
 	}
 
 	// Picking hover/selection feedback

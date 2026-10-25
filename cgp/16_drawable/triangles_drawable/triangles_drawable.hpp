@@ -35,7 +35,7 @@ namespace cgp
 		affine_rts hierarchy_transform_model;
 
 		material_mesh_drawable_phong material;
-		int vertex_number; // actual vertex number to draw
+		int vertex_number = 0; // actual vertex number to draw
 
 
 		void initialize_data_on_gpu(numarray<vec3> const& position, numarray<vec3> const& normal=numarray<vec3>(), numarray<vec3> const& color=numarray<vec3>(), numarray<vec3> const& uv= numarray<vec3>(), opengl_shader_structure const& shader = default_shader, opengl_texture_image_structure const& texture = default_texture);
@@ -45,7 +45,7 @@ namespace cgp
 		std::map<std::string, opengl_texture_image_structure> supplementary_texture; // optional supplementary texture (can be used for multi-texturing)
 	};
 
-	void draw(triangles_drawable const& drawable, environment_generic_structure const& environment = environment_generic_structure(), uniform_generic_structure const& additional_uniforms = uniform_generic_structure());
+	void draw(triangles_drawable const& drawable, environment_generic_structure const& environment = environment_generic_structure(), uniform_generic_structure const& additional_uniforms = uniform_generic_structure(), material_mesh_drawable_phong const* material_override = nullptr);
 
 	void draw_wireframe(triangles_drawable const& drawable, environment_generic_structure const& environment = environment_generic_structure(), vec3 const& color = {0,0,1}, uniform_generic_structure const& additional_uniforms = uniform_generic_structure());
 

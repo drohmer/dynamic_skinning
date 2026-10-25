@@ -14,10 +14,10 @@ struct camera_controller_fly_mode : cgp::camera_controller_first_person
 	float speed_max = 0.5f;
 	float speed_min = 0.0001f;
 
-	void action_mouse_move();
-	void idle_frame();
+	void action_mouse_move() override;
+	void idle_frame() override;
 
-	std::string doc_usage() const;
+	std::string doc_usage() const override;
 };
 
 }

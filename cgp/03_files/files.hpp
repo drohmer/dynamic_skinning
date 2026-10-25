@@ -71,7 +71,7 @@ namespace cgp
 		if(stream.good()) {
 			std::string line;
 			std::getline(stream, line);
-			if(stream.good())
+			if(stream || !line.empty())
 			{
 				std::istringstream stream_line(line);
 				read_from_stream(stream_line, data);
@@ -112,7 +112,7 @@ namespace cgp
 		while(stream.good()) {
 			T temp;
 			read_line_from_stream(stream, temp);
-			if(stream.good())
+			if(stream)
 				data.push_back(temp);
 		}
 
@@ -124,7 +124,7 @@ namespace cgp
 		while(stream.good()) {
 			T temp;
 			read_line_from_stream(stream, temp);
-			if(stream.good())
+			if(stream)
 				data.push_back(temp);
 		}
 

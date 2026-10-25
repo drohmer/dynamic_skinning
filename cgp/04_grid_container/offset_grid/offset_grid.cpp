@@ -16,7 +16,7 @@ namespace cgp
 	{
 		int const k3 = offset / (N1*N2);
 		int const k2 = (offset - N1 * N2 * k3) / N1;
-		int const k1 = offset - N1 * (N2 * k3 - k2);
+		int const k1 = offset - N1 * (N2 * k3 + k2);
 
 		return { k1,k2,k3 };
 	}

@@ -83,3 +83,8 @@ skeleton_animation_structure build_dragon_flight(skeleton_structure const& skele
 // Small angles: the large wings and long tentacles quickly self-intersect. Best seen with the per-vertex
 // bend weights (only the floppy parts deform: wing membranes, tentacles, spikes). Expects the rest pose.
 skeleton_animation_structure build_cthulhu_head_shake(skeleton_structure const& skeleton);
+
+// Train (figure of the paper, delayed LBS): the engine (root joint) goes over bumps of the track, with a
+// small roll on alternate sides. With the delayed LBS, each bump propagates from the engine to the last wagon.
+// Expects the skeleton in its rest pose.
+skeleton_animation_structure build_train_bumps(skeleton_structure const& skeleton);

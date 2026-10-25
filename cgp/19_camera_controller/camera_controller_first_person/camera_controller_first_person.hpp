@@ -10,22 +10,23 @@ namespace cgp
 	{
 		camera_first_person camera_model;
 
+		camera_generic_base&       camera()       override { return camera_model; }
+		camera_generic_base const& camera() const override { return camera_model; }
+
 		// Parameters to adjust camera speed
 		float translation_speed = 1;
 		float rotation_speed = 1;
 
-		void action_mouse_move();
+		void action_mouse_move() override;
 
 
 		// Key 'C' (in capital) to capture the cursor
-		void action_keyboard();
-		void idle_frame();
+		void action_keyboard() override;
+		void idle_frame() override;
 
 		void look_at(vec3 const& eye, vec3 const& center, vec3 const& up);
 
-		std::string doc_usage() const;
+		std::string doc_usage() const override;
 
-	protected:
-		bool is_cursor_trapped = false; // true = cursor captured (/infinite motion), false = cursor free
 	};
 }

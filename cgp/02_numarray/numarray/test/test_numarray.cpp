@@ -114,5 +114,16 @@ namespace cgp_test
 			assert_cgp_no_msg(cgp::is_equal(sum(a),  4.5f+8.2f+6.1f-3.6));
 		}
 
+		// sub/add/mul/div(scalar, array) must use b.size(), not a.size()
+		{
+			cgp::numarray<int> a = {1, 2, 3};
+			assert_cgp_no_msg(is_equal(sub(10, a), cgp::numarray<int>{9, 8, 7}));
+			assert_cgp_no_msg(is_equal(add(10, a), cgp::numarray<int>{11, 12, 13}));
+			assert_cgp_no_msg(is_equal(mul(3,  a), cgp::numarray<int>{3, 6, 9}));
+
+			cgp::numarray<float> b = {2.0f, 4.0f, 8.0f};
+			assert_cgp_no_msg(is_equal(div(16.0f, b), cgp::numarray<float>{8.0f, 4.0f, 2.0f}));
+		}
+
 	}
 }

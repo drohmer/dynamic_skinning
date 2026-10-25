@@ -10,8 +10,8 @@ namespace cgp {
 
 	// Position of the mouse stored in relative coordinates on screen
 struct inputs_mouse_cursor_position_parameters {
-	vec2 current;
-	vec2 previous;
+	vec2 current  = {0,0};
+	vec2 previous = {0,0};
 
 	// Update to a new position
 	void update(vec2 const& new_mouse_position);
@@ -21,7 +21,7 @@ enum class last_mouse_cursor_action { click_left, click_right, release_left, rel
 struct inputs_mouse_cursor_click_parameters {
 	bool left  = false;
 	bool right = false;
-	last_mouse_cursor_action last_action;
+	last_mouse_cursor_action last_action = last_mouse_cursor_action::release_left; // defined default ("nothing clicked yet")
 	void update_from_glfw_click(int button, int action);
 };
 
@@ -34,8 +34,8 @@ struct inputs_mouse_parameters {
 };
 
 struct inputs_keyboard_last_action_parameter {
-	int key;     // GLFW_KEY_...
-	int action;  // GLFW_KEY_PRESS or GLFW_RELEASE
+	int key    = -1;  // GLFW_KEY_... (-1 == GLFW_KEY_UNKNOWN: no key yet)
+	int action = -1;  // GLFW_PRESS / GLFW_RELEASE / GLFW_REPEAT (-1: no action yet)
 
 	bool is_pressed(int glfw_key) const;
 	bool is_pressed(char keyname) const;

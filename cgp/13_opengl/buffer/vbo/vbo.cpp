@@ -66,35 +66,41 @@ namespace cgp
 	void opengl_vbo_structure::update(numarray<vec2> const& data, int size_elements_update)
 	{
 		assert_cgp(size_elements_update <= data.size(), "Cannot update VBO with more elements than data");
+		// Number of bytes actually written by glBufferSubData.
+		GLsizeiptr const bytes_to_send = (size_elements_update == -1) ?
+			GLsizeiptr(size_in_memory(data)) : GLsizeiptr(2 * sizeof(float) * size_elements_update);
+		// glBufferSubData does not reallocate: writing past the allocated buffer is undefined.
+		//  Guard against an update larger than what was allocated at initialization.
+		assert_cgp(bytes_to_send <= GLsizeiptr(details.size_byte),
+			"Cannot update VBO with more data than was allocated. Re-initialize the buffer instead.");
 		glBindBuffer(GL_ARRAY_BUFFER, id); opengl_check;
-		if (size_elements_update == -1) {
-			glBufferSubData(GL_ARRAY_BUFFER, 0, size_in_memory(data), ptr(data));  opengl_check;
-		}
-		else {
-			glBufferSubData(GL_ARRAY_BUFFER, 0, 2 * sizeof(float) * size_elements_update, ptr(data));  opengl_check;
-		}
+		glBufferSubData(GL_ARRAY_BUFFER, 0, bytes_to_send, ptr(data));  opengl_check;
 	}
 	void opengl_vbo_structure::update(numarray<vec3> const& data, int size_elements_update)
 	{
 		assert_cgp(size_elements_update <= data.size(), "Cannot update VBO with more elements than data");
+		// Number of bytes actually written by glBufferSubData.
+		GLsizeiptr const bytes_to_send = (size_elements_update == -1) ?
+			GLsizeiptr(size_in_memory(data)) : GLsizeiptr(3 * sizeof(float) * size_elements_update);
+		// glBufferSubData does not reallocate: writing past the allocated buffer is undefined.
+		//  Guard against an update larger than what was allocated at initialization.
+		assert_cgp(bytes_to_send <= GLsizeiptr(details.size_byte),
+			"Cannot update VBO with more data than was allocated. Re-initialize the buffer instead.");
 		glBindBuffer(GL_ARRAY_BUFFER, id); opengl_check;
-		if (size_elements_update == -1) {
-			glBufferSubData(GL_ARRAY_BUFFER, 0, size_in_memory(data), ptr(data));  opengl_check;
-		}
-		else {
-			glBufferSubData(GL_ARRAY_BUFFER, 0, 3 * sizeof(float) * size_elements_update, ptr(data));  opengl_check;
-		}
+		glBufferSubData(GL_ARRAY_BUFFER, 0, bytes_to_send, ptr(data));  opengl_check;
 	}
 	void opengl_vbo_structure::update(numarray<vec4> const& data, int size_elements_update)
 	{
 		assert_cgp(size_elements_update <= data.size(), "Cannot update VBO with more elements than data");
+		// Number of bytes actually written by glBufferSubData.
+		GLsizeiptr const bytes_to_send = (size_elements_update == -1) ?
+			GLsizeiptr(size_in_memory(data)) : GLsizeiptr(4 * sizeof(float) * size_elements_update);
+		// glBufferSubData does not reallocate: writing past the allocated buffer is undefined.
+		//  Guard against an update larger than what was allocated at initialization.
+		assert_cgp(bytes_to_send <= GLsizeiptr(details.size_byte),
+			"Cannot update VBO with more data than was allocated. Re-initialize the buffer instead.");
 		glBindBuffer(GL_ARRAY_BUFFER, id); opengl_check;
-		if (size_elements_update == -1) {
-			glBufferSubData(GL_ARRAY_BUFFER, 0, size_in_memory(data), ptr(data));  opengl_check;
-		}
-		else {
-			glBufferSubData(GL_ARRAY_BUFFER, 0, 4 * sizeof(float) * size_elements_update, ptr(data));  opengl_check;
-		}
+		glBufferSubData(GL_ARRAY_BUFFER, 0, bytes_to_send, ptr(data));  opengl_check;
 	}
 
 

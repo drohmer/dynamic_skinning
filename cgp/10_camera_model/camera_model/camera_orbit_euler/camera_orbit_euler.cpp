@@ -43,11 +43,11 @@ namespace cgp
 	}
 	void camera_orbit_euler::manipulator_translate_in_plane(vec2 const& tr)
 	{
-		center_of_rotation -= translation_in_plane(tr, orientation());
+		center_of_rotation += translation_in_plane(tr, orientation());
 	}
 	void camera_orbit_euler::manipulator_translate_front(float magnitude)
 	{
-		center_of_rotation -= magnitude * front();
+		center_of_rotation += magnitude * front();
 	}
 
 	void camera_orbit_euler::manipulator_twist_rotation_axis(float magnitude)

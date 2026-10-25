@@ -197,5 +197,13 @@ namespace cgp_test
 
 		
 
+
+		// operator/= must modify a in-place, not write into a local variable
+		{
+			cgp::numarray_stack<float,3> a = {6.0f, 4.0f, 9.0f};
+			cgp::numarray_stack<float,3> b = {2.0f, 2.0f, 3.0f};
+			a /= b;
+			assert_cgp_no_msg(is_equal(a, cgp::numarray_stack<float,3>{3.0f, 2.0f, 3.0f}));
+		}
 	}
 }

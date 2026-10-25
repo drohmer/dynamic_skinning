@@ -11,6 +11,7 @@ layout (location = 2) in vec3 vertex_color;
 layout (location = 3) in vec2 vertex_uv;
 layout (location = 4) in vec4 skinning_joint_indices;  // skeleton-space joint indices (as float)
 layout (location = 5) in vec4 skinning_weights;        // LBS weights
+layout (location = 6) in vec2 delay_distance;          // distance d_i along the skeleton (delayed LBS)
 
 // Output to fragment shader
 out struct fragment_data
@@ -31,6 +32,8 @@ uniform sampler2D skinning_matrices_tex;   // 4 x N_joints, each row = one mat4 
 uniform sampler2D joint_global_tex;        // 4 x N_joints, each row = one mat4 (joint_matrix_global[j])
 uniform sampler2D filtered_velocity_tex;   // 1 x N_joints, pre-filtered angular velocity per joint
 uniform sampler2D hier_weights_tex;        // tiled 2D: (hier_max * hier_tile_w) x ceil(N_vertex / hier_tile_w)
+uniform sampler2D history_tex;             // (4 N_history) x N_joints: past local joint matrices (delayed LBS)
+uniform sampler2D dlbs_joint_tex;          // 5 x N_joints: B_j^-1, then (parent, d_j) (delayed LBS)
 
 // Dynamic skinning uniforms
 uniform int ds_active;
@@ -38,6 +41,12 @@ uniform int hier_max;
 uniform int hier_tile_w;    // tiling: vertices per row in hier_weights_tex
 uniform float bend_factor;
 uniform int display_bend_weights;  // if 1, encode γ^bend as white→soft red color
+
+// Delayed LBS uniforms
+uniform int dlbs_active;
+uniform int dlbs_head;                  // index of the most recent pose in the ring buffer
+uniform int dlbs_N;                     // number of stored poses
+uniform float dlbs_steps_per_distance;  // delay in time steps per unit of distance: 1 / (c dt)
 
 
 // ============================================================================
@@ -49,6 +58,33 @@ mat4 get_mat4(sampler2D tex, int row) {
                 texelFetch(tex, ivec2(1, row), 0),
                 texelFetch(tex, ivec2(2, row), 0),
                 texelFetch(tex, ivec2(3, row), 0));
+}
+
+// Local matrix of joint j for the stored pose k (ring buffer index)
+mat4 get_history_mat4(int k, int j) {
+    return mat4(texelFetch(history_tex, ivec2(4 * k + 0, j), 0),
+                texelFetch(history_tex, ivec2(4 * k + 1, j), 0),
+                texelFetch(history_tex, ivec2(4 * k + 2, j), 0),
+                texelFetch(history_tex, ivec2(4 * k + 3, j), 0));
+}
+
+// Delayed skinning matrix of joint j for a vertex at the distance d along the skeleton:
+//   T_j^d = Π_{k ∈ root..j} L_k(t - (d - d_k) / c)  B_j^-1
+mat4 get_delayed_skinning_mat4(int j, float d) {
+    mat4 G = mat4(1.0);
+    int k = j;
+    for (int depth = 0; depth < 256 && k >= 0; ++depth) {
+        vec4 info = texelFetch(dlbs_joint_tex, ivec2(4, k), 0);  // (parent, d_k)
+        // Delay of L_k in time steps, interpolated between two stored poses
+        float s = clamp((d - info.y) * dlbs_steps_per_distance, 0.0, float(dlbs_N - 2));
+        int k0 = int(s);
+        float a = s - float(k0);
+        int frame0 = (dlbs_head - k0 + dlbs_N) % dlbs_N;
+        int frame1 = (dlbs_head - k0 - 1 + dlbs_N) % dlbs_N;
+        G = ((1.0 - a) * get_history_mat4(frame0, k) + a * get_history_mat4(frame1, k)) * G;
+        k = int(info.x);
+    }
+    return G * get_mat4(dlbs_joint_tex, j);
 }
 
 vec3 get_translation(sampler2D tex, int row) {
@@ -69,7 +105,9 @@ void main()
         if (w < 1e-6) continue;
 
         int joint_idx = int(skinning_joint_indices[i]);
-        mat4 T = get_mat4(skinning_matrices_tex, joint_idx);
+        mat4 T = (dlbs_active != 0)
+            ? get_delayed_skinning_mat4(joint_idx, delay_distance.x)
+            : get_mat4(skinning_matrices_tex, joint_idx);
         p_skinned += w * (T * vec4(vertex_position, 1.0)).xyz;
         n_skinned += w * (T * vec4(vertex_normal, 0.0)).xyz;
     }
@@ -89,7 +127,7 @@ void main()
         float weight_bend = texelFetch(hier_weights_tex, ivec2(tile_col_base, tile_row), 0).z;
 
         for (int k = 0; k < hier_max; ++k) {
-            // Read hierarchical weight entry: (joint_idx, beta, weight_bend, 0)
+            // Read hierarchical weight entry: (joint_idx, beta, weight_bend, center_joint_idx)
             vec4 hw = texelFetch(hier_weights_tex, ivec2(tile_col_base + k, tile_row), 0);
             int j = int(hw.x);
             float beta = hw.y;
@@ -103,7 +141,7 @@ void main()
             vec3 od = filtered / on;
 
             // --- Bend deformer (Rodrigues formula) ---
-            vec3 pj = get_translation(joint_global_tex, j);
+            vec3 pj = get_translation(joint_global_tex, int(hw.w));  // rotation center: q_j, or a flexible origin
             vec3 u = p_skinned - pj;
 
             // v = component of u perpendicular to rotation axis

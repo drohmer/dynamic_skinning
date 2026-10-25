@@ -138,7 +138,7 @@ namespace cgp
 	{
 		return {a.x*b.x, a.x*b.y, a.x*b.z, a.x*b.w,
 				a.y*b.x, a.y*b.y, a.y*b.z, a.y*b.w,
-				a.z*b.x, a.z*b.y, a.z*b.z, a.w*b.w,
+				a.z*b.x, a.z*b.y, a.z*b.z, a.z*b.w,
 				a.w*b.x, a.w*b.y, a.w*b.z, a.w*b.w,};
 	}
 

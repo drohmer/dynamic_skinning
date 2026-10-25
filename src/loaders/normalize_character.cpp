@@ -12,7 +12,7 @@ using namespace cgp;
 // - Animations: same treatment
 // - Inverse bind: scale by s (derived from inv_bind' = s * inv_bind)
 // - Mesh bind pose: UNCHANGED (it may live in a different scale, as with asset_loader)
-void normalize_character(character_structure& character)
+normalization_transform normalize_character(character_structure& character)
 {
     auto& model = character.animated_model;
 
@@ -35,7 +35,7 @@ void normalize_character(character_structure& character)
     vec3 center = (p_min + p_max) / 2.0f;
     vec3 extent = p_max - p_min;
     float max_extent = std::max(std::max(extent.x, extent.y), extent.z);
-    if (max_extent < 1e-5f) return;
+    if (max_extent < 1e-5f) return {};
     float s = 2.0f / max_extent;
 
     // 3. Transform skeleton: offset root by -center, then scale ALL translations by s.
@@ -80,4 +80,6 @@ void normalize_character(character_structure& character)
 
     // 6. Rebuild skeleton drawable with normalized joint positions
     character.sk_drawable = skeleton_drawable(model.skeleton);
+
+    return {s, center};
 }

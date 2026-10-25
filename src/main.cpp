@@ -73,6 +73,8 @@ int main(int, char* argv[])
 			scene.use_gpu_skinning = (capture.gpu == 1);
 		if (capture.dynamic_skinning >= 0)
 			scene.ds_params.active = (capture.dynamic_skinning == 1);
+		if (capture.delay >= 0)
+			scene.ds_params.delay_active = (capture.delay == 1);
 		scene.character.timer.start();
 		scene.animation_running = true;
 		scene.show_settings = (capture.gui == 2);

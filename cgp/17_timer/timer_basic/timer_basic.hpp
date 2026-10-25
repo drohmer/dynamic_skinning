@@ -16,7 +16,12 @@ namespace cgp
 
 	protected:
 		bool running;
-		float time_previous;
+		double time_previous;
 	};
 
+	// Time source (in seconds) shared by all timers. Defaults to a steady
+	//  monotonic clock; tests may override it for deterministic timing
+	//  (pass nullptr to timer_set_time_source to restore the default).
+	double timer_current_time();
+	void   timer_set_time_source(double (*source)());
 }

@@ -18,7 +18,7 @@ namespace cgp
         numarray_stack<T, 4>(numarray_stack<T, 3> const& xyz, T const& w);
         numarray_stack<T, 4>(T const& x, numarray_stack<T, 3> const& yzw);
 
-        numarray_stack<T, 4>(T const& x, T const& y, numarray_stack<T, 2> const& yz);
+        numarray_stack<T, 4>(T const& x, T const& y, numarray_stack<T, 2> const& zw);
         numarray_stack<T, 4>(numarray_stack<T, 2> const& xy, T const& z, T const& w);
         numarray_stack<T, 4>(T const& x, numarray_stack<T, 2> const& yz, T const& w);
         numarray_stack<T, 4>(numarray_stack<T, 2> const& xy, numarray_stack<T, 2> const& zw);
@@ -52,8 +52,8 @@ namespace cgp
         T const* cbegin() const;
         T const* cend() const;
 
-        T const& at_unsafe(int index) const { return (&x)[index]; }
-        T& at_unsafe(int index) { return (&x)[index]; }
+        T const& coeff(int index) const { return (&x)[index]; }
+        T& coeff(int index) { return (&x)[index]; }
 
         /** Sub-vector */
         numarray_stack<T, 3> xyz() const;
@@ -82,8 +82,8 @@ namespace cgp
         : x(x_arg), y(get<0>(yzw)), z(get<1>(yzw)), w(get<2>(yzw))
     {}
 
-    template <typename T> numarray_stack<T, 4>::numarray_stack(T const& x_arg, T const& y_arg, numarray_stack<T, 2> const& yz)
-        : x(x_arg), y(y_arg), z(get<0>(yz)), w(get<1>(yz))
+    template <typename T> numarray_stack<T, 4>::numarray_stack(T const& x_arg, T const& y_arg, numarray_stack<T, 2> const& zw)
+        : x(x_arg), y(y_arg), z(get<0>(zw)), w(get<1>(zw))
     {}
     template <typename T> numarray_stack<T, 4>::numarray_stack(numarray_stack<T, 2> const& xy, T const& z_arg, T const& w_arg)
         : x(get<0>(xy)), y(get<1>(xy)), z(z_arg), w(w_arg)
@@ -115,14 +115,11 @@ namespace cgp
     template <typename T, int N, typename INDEX_TYPE>
     void check_index_bounds(INDEX_TYPE index, numarray_stack<T, 4> const& data)
     {
-#ifndef cgp_NO_DEBUG
-        if (index < 0 || index>3)
-        {
-            std::string msg = "\n";
-            msg += " - Try access " + type_str(data) + "[" + str(index) + "]\n";
-            msg += " - Indexing is limited to 0, 1, 2, 3";
-            error_cgp(msg);
-        }
+#ifndef CGP_NO_DEBUG
+        if (index < 0 || index > 3)
+            error_cgp(index_out_of_bounds_message((long long)index, 4, "index", type_str(data)));
+#else
+        (void)index; (void)data;
 #endif
     }
 

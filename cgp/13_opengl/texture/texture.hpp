@@ -15,12 +15,12 @@ namespace cgp
 	{
 		GLuint id = 0; // OpenGL ID for the texture
 
-		int width;  // image width
-		int height; // image height
+		int width = 0;  // image width
+		int height = 0; // image height
 
-		GLint format; // GL_RGB8, GL_RGBA8, GL_RGBF32
+		GLint format = 0; // GL_RGB8, GL_RGBA8, GL_RGBF32
 
-		GLenum texture_type; // = GL_TEXTURE_2D or GL_TEXTURE_CUBE_MAP
+		GLenum texture_type = 0; // = GL_TEXTURE_2D or GL_TEXTURE_CUBE_MAP
 
 		void bind() const;
 		void unbind() const;

@@ -30,7 +30,7 @@ namespace cgp
 
 	void camera_first_person::manipulator_translate_in_plane(vec2 const& tr)
 	{
-		position_camera -= translation_in_plane(tr, orientation_camera);
+		position_camera += translation_in_plane(tr, orientation_camera);
 	}
 	void camera_first_person::manipulator_translate_front(float magnitude)
 	{

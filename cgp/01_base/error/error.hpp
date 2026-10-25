@@ -20,6 +20,16 @@ namespace cgp
 {
 [[noreturn]] void call_error(std::string const& error, std::string const& message, std::string const& filename, std::string const& function_name, int line);
 
+// Build the canonical "index out of bounds" error message for an access along a single axis.
+//  This is the single source of truth used by all containers (numarray, numarray_stack, matrix_stack, grid_*)
+//  so that the message stays consistent and each call site only has to provide its own axis size and label.
+//  - index      : the offending index value (valid range is [0, axis_size-1])
+//  - axis_size  : the size of the axis being indexed
+//  - axis_label : name of the indexed axis, e.g. "index", "row index", "x", "offset"
+//  - container_type : type string of the accessed container (typically type_str(data))
+// The returned string is meant to be passed to error_cgp(...) so that the reported location stays at the call site.
+std::string index_out_of_bounds_message(long long index, long long axis_size, std::string const& axis_label, std::string const& container_type);
+
 void call_warning(std::string const& message_id, std::string const& extra, std::string const& filename, std::string const& function_name, int line);
 struct cgp_warning {
 	static int max_warning; // change max_warning in your program to 0 to remove all warnings
@@ -30,14 +40,14 @@ struct cgp_warning {
 #define assert_cgp(X, MSG)   {if( (X)==false ) {cgp::call_error(#X,MSG,__FILE__,__func__ ,__LINE__);} }
 #define assert_cgp_no_msg(X) {if( (X)==false ) {cgp::call_error(#X,"",__FILE__,__func__ ,__LINE__);} }
 #else
-#define assert_cgp(X, MSG) {}
-#define assert_cgp_no_msg(X) {}
+#define assert_cgp(X, MSG) {(void)sizeof(X);}
+#define assert_cgp_no_msg(X) {(void)sizeof(X);}
 #endif
 
 #define error_cgp(MSG)  {cgp::call_error("",MSG,__FILE__,__func__,__LINE__); }
 
 // Default behavior of cgp error is to abort the program.
-//  The default behavior can be switched to throwing exception in defining cgp_ERROR_EXCEPTION
+//  The default behavior can be switched to throwing exception in defining CGP_ERROR_EXCEPTION
 // #define CGP_ERROR_EXCEPTION
 
 

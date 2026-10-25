@@ -53,7 +53,9 @@ namespace cgp
 	{
 		vbo_position.clear(); opengl_check;
 
-		glDeleteVertexArrays(1, &vao); opengl_check;
+		if (vao != 0)
+			glDeleteVertexArrays(1, &vao);
+		opengl_check;
 		vao = 0;
 		shader.id = 0;
 		model = affine();

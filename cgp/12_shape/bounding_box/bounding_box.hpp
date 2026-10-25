@@ -8,8 +8,8 @@ namespace cgp
 struct bounding_box 
 {
     // Store the two extremal corners
-    vec3 p_min;
-    vec3 p_max;
+    vec3 p_min = {0,0,0};
+    vec3 p_max = {0,0,0};
 
 
     // Initialize a bounding box structure from a mesh
@@ -24,7 +24,7 @@ struct bounding_box
     void extends(vec3 const& d);
 
     // Check is a point is inside the bounding box
-    bool inside(vec3 const& p);
+    bool inside(vec3 const& p) const;
 
     // Check if two bounding boxes collide
     static bool collide(bounding_box const& bb1, bounding_box const& bb2);

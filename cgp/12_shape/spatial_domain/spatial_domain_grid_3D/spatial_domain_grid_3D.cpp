@@ -4,10 +4,6 @@
 
 namespace cgp{
 
-	vec3 center;
-	vec3 length;
-	int3 samples;
-
 	spatial_domain_grid_3D::spatial_domain_grid_3D()
 		:center(), length(), samples()
 	{}
@@ -32,6 +28,7 @@ namespace cgp{
 
 	vec3 spatial_domain_grid_3D::position_relative(int3 const& index) const
 	{
+		assert_cgp(samples.x > 1 && samples.y > 1 && samples.z > 1, "spatial_domain_grid_3D: each dimension must have at least 2 samples");
 		return { index.x / (samples.x-1.0f), index.y/(samples.y-1.0f), index.z/(samples.z-1.0f) };
 	}
 	vec3 spatial_domain_grid_3D::position(int3 const& index) const
@@ -49,6 +46,7 @@ namespace cgp{
 	}
 	vec3 spatial_domain_grid_3D::voxel_length() const
 	{
+		assert_cgp(samples.x > 1 && samples.y > 1 && samples.z > 1, "spatial_domain_grid_3D: each dimension must have at least 2 samples");
 		return { length.x / (samples.x - 1), length.y / (samples.y - 1), length.z / (samples.z - 1) };
 	}
 

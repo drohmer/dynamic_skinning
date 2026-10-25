@@ -12,7 +12,7 @@ bool is_equal(float a, float b)
 }
 bool is_equal(double a, double b)
 {
-    return std::abs(a-b) <= 1e-7f;
+    return std::abs(a-b) <= 1e-7;
 }
 
 

@@ -14,6 +14,7 @@
 #include "loaders/cylinder_loader.hpp"
 #include "loaders/legacy_loader.hpp"
 #include "loaders/cthulhu_loader.hpp"
+#include "loaders/normalize_character.hpp"
 
 
 using cgp::mesh_drawable;
@@ -77,17 +78,30 @@ struct scene_structure : cgp::scene_inputs_generic {
 	int cthulhu_resolution_index = 0;  // index into cthulhu_resolutions[]
 	bool cthulhu_use_bend_weights = true;  // floppy parts only (wing membranes, tentacles)
 	bool display_bend_weights = true;  // color the floppy parts (white -> red)
+	bool delay_enabled_once = false;     // the first activation of the delay turns off the dynamic skinning
+	bool clown_flexible_origins = true;  // Clown: rigid body, arms and hat bent around their own origin
 
 	// ****************************** //
 	// Dynamic Skinning & Joint Picking
 	// ****************************** //
 	dynamic_skinning_parameters ds_params;
 	dynamic_skinning_state ds_state;
+	delayed_lbs_state dlbs_state;  // history of the poses for the delayed LBS
 	joint_picking_state picking;
 	cgp::numarray<cgp::mat4> interactive_deformation;
 	cgp::numarray<cgp::mat4> skeleton_local_rest;  // local matrices restored each frame before animation
 	float flap_frequency = 0.0f;  // (Hz) wing beat frequency of the current dragon "Flight" animation
 	mesh_drawable sphere_picking;
+
+	// Train: track (rails, bars, pillars) scrolling backward, so that the train seems to move forward
+	struct track_part {
+		mesh_drawable drawable;
+		float period = 0;  // length of the repeated pattern (display units): the scrolling wraps around it
+	};
+	std::vector<track_part> train_track;
+	float train_speed = 1.2f;  // scrolling speed of the track (display units per second)
+	void initialize_train_track(normalization_transform const& normalization);
+	void draw_train_track();
 	bool camera_mode = false;  // false = bone-edit mode, true = camera mode
 	touch_gesture_state touch;  // pinch zoom on touch screens (web version)
 	weight_display_mode weight_display = weight_display_mode::none;

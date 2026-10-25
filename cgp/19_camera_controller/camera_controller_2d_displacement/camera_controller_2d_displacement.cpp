@@ -4,10 +4,7 @@ namespace cgp
 {
 	void camera_controller_2d_displacement::action_mouse_move()
 	{
-		// Preconditions
-		assert_cgp_no_msg(inputs != nullptr);
-		assert_cgp_no_msg(window != nullptr);
-		if (!is_active) return;
+		if (!is_ready()) return;
 
 		vec2 const& p1 = inputs->mouse.position.current;
 		vec2 const& p0 = inputs->mouse.position.previous;
@@ -20,7 +17,8 @@ namespace cgp
 
 		vec3 const& up = camera_model.axis_of_rotation;
 		vec3 const& front = camera_model.front();
-		vec3 const move_front = front - dot(front, up) * up;
+		vec3 move_front = front - dot(front, up) * up;
+		if (float const len = norm(move_front); len > 1e-4f) move_front /= len;
 
 
 		if (event_valid) {
@@ -39,10 +37,7 @@ namespace cgp
 
 	void camera_controller_2d_displacement::idle_frame()
 	{
-		// Preconditions
-		assert_cgp_no_msg(inputs != nullptr);
-		assert_cgp_no_msg(window != nullptr);
-		if (!is_active) return;
+		if (!is_ready()) return;
 
 		float magnitude = 1.5f * inputs->time_interval;
 
@@ -56,7 +51,9 @@ namespace cgp
 
 		// Constraint displacement on the plane
 		vec3 move_front = front - dot(front, up) * up;
+		if (float const len = norm(move_front); len > 1e-4f) move_front /= len;
 		vec3 move_right = right - dot(right, up) * up;
+		if (float const len = norm(move_right); len > 1e-4f) move_right /= len;
 
 
 		if (inputs->keyboard.up || inputs->keyboard.is_pressed(GLFW_KEY_W))

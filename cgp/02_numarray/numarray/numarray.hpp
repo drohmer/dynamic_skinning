@@ -16,7 +16,7 @@ namespace cgp
  *
  * The numarray structure is a wrapper around an std::vector with additional convenient functionalities
  * - Overloaded operators + - * / as well as common outputs
- * - Strict bound checking with operator [] and () (unless cgp_NO_DEBUG is defined)
+ * - Strict bound checking with operator [] and () (unless CGP_NO_DEBUG is defined)
  *
  * Numarray follows the main syntax than std::vector
  * Elements in a numarray are stored contiguously in memory (use std::vector internally)
@@ -56,7 +56,7 @@ struct numarray
 
     /** Element access
      * Allows numarray[i], numarray(i), and numarray.at(i)
-     * Bound checking is performed unless cgp_NO_DEBUG is defined. */
+     * Bound checking is performed unless CGP_NO_DEBUG is defined. */
     T const& operator[](int index) const;
     T& operator[](int index);
     T const& operator()(int index) const;
@@ -78,8 +78,8 @@ struct numarray
 
     /** Direct access to the value - doesn't check index bounds*/
     // Depreciated function - use at() instead
-    T const& at_unsafe(int index) const;
-    T& at_unsafe(int index);
+    T const& coeff(int index) const;
+    T& coeff(int index);
 };
 
 template <typename T> std::string type_str(numarray<T> const&);
@@ -120,9 +120,11 @@ template <typename T> T sum(numarray<T> const& a);
 template <typename T> numarray<T>  operator-(numarray<T> const& a);
 
 template <typename T> numarray<T>& operator+=(numarray<T>& a, numarray<T> const& b);
+template <typename T> numarray<T>& operator+=(numarray<T>& a, T const& b);
 template <typename T> numarray<T>  operator+(numarray<T> const& a, numarray<T> const& b);
 
 template <typename T> numarray<T>& operator-=(numarray<T>& a, numarray<T> const& b);
+template <typename T> numarray<T>& operator-=(numarray<T>& a, T const& b);
 template <typename T> numarray<T>  operator-(numarray<T> const& a, numarray<T> const& b);
 
 template <typename T> numarray<T>& operator*=(numarray<T>& a, numarray<T> const& b);
@@ -238,61 +240,14 @@ template <typename T> std::string type_str(numarray<T> const&)
 }
 
 
-#ifndef cgp_NO_DEBUG
+#ifndef CGP_NO_DEBUG
 template <typename T>
 void check_index_bounds(int index, numarray<T> const& data)
 {
 
     int const N = data.size();
     if (index < 0 || index >= N)
-    {
-        std::string msg = "\n";
-
-        if (index < 0)
-        {
-            msg += "\t> Try to access numarray[" + str(index) + "]\n";
-            msg += "\t> Numarray cannot be access with negative index.\n";
-            msg += "\t  Extra information:\n";
-            msg += "\t    - Size of the numarray: " + str(data.size()) + "\n";
-            msg += "\t    - Index value: " + str(index) + "\n";
-            msg += "\t    - Numarray type: " + type_str(data) + "\n";
-            msg += "\t  Help: \n";
-            msg += "\t     Contrary to Python, negative indexing in C++ doesn't target the end of the numarray. \n";
-            msg += "\t     Numarrays of data cannot be accessed with negative index. \n";
-        }
-        else if (N == 0)
-        {
-            msg += "\t> Try to access numarray[" + str(index) + "]\n";
-            msg += "\t> But the numarray (" + type_str(data) + ") is empty. Its elements cannot be accessed.\n";
-            msg += "\t  Help: \n";
-            msg += "\t     You may have forgotten to intialize the size of this numarray: \n";
-            msg += "\t     - use numarray.resize(N) before its use \n";
-            msg += "\t     - or use numarray.push_back(element) to add new elements to it \n";
-        }
-        else if (index == N)
-        {
-            msg += "\t> Try to access numarray[" + str(index) + "] for a numarray of size=" + str(data.size()) + "\n";
-            msg += "\t> Index reached the maximal size of the numarray \n";
-            msg += "\t> The maximal possible index should be " + str(data.size() - 1) + " \n";
-            msg += "\t  Extra information:\n";
-            msg += "\t    - numarray type: " + type_str(data) + "\n";
-            msg += "\t  Help: \n";
-            msg += "\t     C++ has index starting at 0. \n";
-            msg += "\t     Typical loops should go from index=0 to index<numarray.size(). \n";
-        }
-        else if (index >= N)
-        {
-            msg += "\t> Try to access numarray[" + str(index) + "] for a size=" + str(data.size()) + "\n";
-            msg += "\t> numarray has a size=" + str(data.size()) + ": The index (" + str(index) + ") should be < " + str(data.size()) + "\n";
-            msg += "\t  Extra information:\n";
-            msg += "\t    - Numarray type: " + type_str(data) + "\n";
-        }
-
-
-        msg += "\t  The function and variable that generated this error can be found in analysis the Call Stack.\n";
-
-        error_cgp(msg);
-    }
+        error_cgp(index_out_of_bounds_message((long long)index, (long long)N, "index", type_str(data)));
 }
 #else
 template <typename T> void check_index_bounds(int , numarray<T> const& ) {}
@@ -331,13 +286,13 @@ T& numarray<T>::operator()(int index)
 
 
 template <typename T>
-T const& numarray<T>::at_unsafe(int index) const
+T const& numarray<T>::coeff(int index) const
 {
     return data[index];
 }
 
 template <typename T>
-T& numarray<T>::at_unsafe(int index)
+T& numarray<T>::coeff(int index)
 {
     return data[index];
 }
@@ -443,7 +398,7 @@ template <typename T> T max(numarray<T> const& v)
 template <typename T> T min(numarray<T> const& v)
 {
     int const N = v.size();
-    assert_cgp(N>0, "Cannot get max on empty numarray");
+    assert_cgp(N>0, "Cannot get min on empty numarray");
 
     T current_min = v[0];
     for (int k = 1; k < N; ++k) {
@@ -471,6 +426,15 @@ numarray<T>& operator+=(numarray<T>& a, numarray<T> const& b)
 
 
 template <typename T>
+numarray<T>& operator+=(numarray<T>& a, T const& b)
+{
+    int const N = a.size();
+    for(int k=0; k<N; ++k)
+        a[k] += b;
+    return a;
+}
+
+template <typename T>
 numarray<T>  operator+(numarray<T> const& a, numarray<T> const& b)
 {
     numarray<T> res = a;
@@ -481,8 +445,10 @@ numarray<T>  operator+(numarray<T> const& a, numarray<T> const& b)
 template <typename T>
 numarray<T>  operator+(numarray<T> const& a, T const& b)
 {
-    numarray<T> res = a;
-    res += b;
+    int const N = a.size();
+    numarray<T> res(N);
+    for(int k=0; k<N; ++k)
+        res[k] = a[k]+b;
     return res;
 }
 
@@ -514,6 +480,15 @@ template <typename T> numarray<T>& operator-=(numarray<T>& a, numarray<T> const&
     const int N = a.size();
     for(int k=0; k<N; ++k)
         a[k] -= b[k];
+    return a;
+}
+
+template <typename T>
+numarray<T>& operator-=(numarray<T>& a, T const& b)
+{
+    int const N = a.size();
+    for(int k=0; k<N; ++k)
+        a[k] -= b;
     return a;
 }
 
@@ -638,6 +613,7 @@ numarray<T> numarray<T>::linespace(T const& p1, T const& p2, int N)
 
 template <typename T> auto const* ptr(numarray<T> const& v)
 {
+    assert_cgp(v.size()>0, "Cannot get ptr of an empty numarray");
     using cgp::ptr;
     return ptr(v[0]);
 }
@@ -693,7 +669,7 @@ template <typename T> numarray<T> div(numarray<T> const& a, T const& b)
 
 template <typename T> numarray<T>  sub(T const& a, numarray<T> const& b)
 {
-    int N= a.size();
+    int N= b.size();
     numarray<T> res;
     res.resize(N);
 
@@ -705,7 +681,7 @@ template <typename T> numarray<T>  sub(T const& a, numarray<T> const& b)
 }
 template <typename T> numarray<T>  add(T const& a, numarray<T> const& b)
 {
-    int N= a.size();
+    int N= b.size();
     numarray<T> res;
     res.resize(N);
 
@@ -717,7 +693,7 @@ template <typename T> numarray<T>  add(T const& a, numarray<T> const& b)
 }
 template <typename T> numarray<T>  mul(T const& a, numarray<T> const& b)
 {
-    int N= a.size();
+    int N= b.size();
     numarray<T> res;
     res.resize(N);
 
@@ -729,7 +705,7 @@ template <typename T> numarray<T>  mul(T const& a, numarray<T> const& b)
 }
 template <typename T> numarray<T>  div(T const& a, numarray<T> const& b)
 {
-    int N= a.size();
+    int N= b.size();
     numarray<T> res;
     res.resize(N);
 

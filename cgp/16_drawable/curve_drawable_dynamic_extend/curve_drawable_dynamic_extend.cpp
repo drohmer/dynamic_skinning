@@ -25,6 +25,11 @@ namespace cgp
 
 	curve_drawable_dynamic_extend& curve_drawable_dynamic_extend::push_back(cgp::vec3 const& p)
 	{
+		// Lazily initialize the VBO if push_back is called before initialize_data_on_gpu().
+		//  Avoids a resize to capacity 0 (which would overflow the empty buffer below).
+		if (vbo_position.size == 0)
+			initialize_data_on_gpu();
+
 		if (int(vbo_position.size) <= int(N_valid_points + 1)) // Need resizing - the VBO is too small
 		{
 			// Future capacity
@@ -66,6 +71,6 @@ namespace cgp
 
 	void draw(curve_drawable_dynamic_extend const& drawable, environment_generic_structure const& environment)
 	{
-		draw(static_cast<curve_drawable>(drawable), environment, drawable.N_valid_points);
+		draw(static_cast<curve_drawable const&>(drawable), environment, drawable.N_valid_points);
 	}
 }

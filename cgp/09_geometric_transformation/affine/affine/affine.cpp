@@ -68,13 +68,6 @@ namespace cgp
 	}
 
 
-	affine inverse(affine const& T)
-	{
-		rotation_transform const R_inv = inverse(T.rotation);
-		return affine(R_inv, -(R_inv*T.translation), 1.0f/T.scaling, vec3{1.0f/T.scaling_xyz.x, 1.0f / T.scaling_xyz.y, 1.0f / T.scaling_xyz.z });
-	}
-
-
 	std::string type_str(affine const&)
 	{
 		return "affine";

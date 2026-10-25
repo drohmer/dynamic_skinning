@@ -6,7 +6,7 @@ namespace cgp
 {
     /** Interpolate value(x,y) using bilinear interpolation
     * - value: grid_2D - coordinates assumed to be its indices
-    * - (x,y): coordinates assumed to be \in [0,value.dimension.x-1] X [0,value.dimension.y]
+    * - (x,y): coordinates assumed to be \in [0,value.dimension.x-2] X [0,value.dimension.y-2]
     */
     template <typename T>
     T interpolation_bilinear(grid_2D<T> const& value, float x, float y);

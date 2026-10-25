@@ -86,6 +86,23 @@ namespace cgp {
 		
 	}
 
+	void skybox_drawable::clear()
+	{
+		vbo_position.clear();
+		ebo_connectivity.clear();
+
+		if (vao != 0)
+			glDeleteVertexArrays(1, &vao);
+		vao = 0;
+
+		shader.clear(); // the skybox owns its inline-loaded program
+		texture = opengl_texture_image_structure(); // texture ownership is external (cubemap set by the user)
+		model = affine();
+		skybox_rotation = mat3::build_identity();
+
+		opengl_check;
+	}
+
 	void draw(skybox_drawable const& drawable, environment_generic_structure const& environment)
 	{
 		opengl_check;
@@ -99,7 +116,7 @@ namespace cgp {
 		}
 
 		assert_cgp(drawable.shader.id != 0, "Try to draw skybox_drawable without shader ");
-		assert_cgp(!glIsShader(drawable.shader.id), "Try to draw skybox_drawable with incorrect shader ");
+		assert_cgp(glIsProgram(drawable.shader.id), "Try to draw skybox_drawable with incorrect shader ");
 		assert_cgp(drawable.texture.id != 0, "Try to draw skybox_drawable without texture ");
 
 		// Set the current shader

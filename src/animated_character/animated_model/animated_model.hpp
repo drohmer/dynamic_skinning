@@ -28,6 +28,10 @@ struct animated_model_structure {
     // Joints to exclude from dynamic skinning hierarchical weights (e.g. FBones)
     std::set<int> excluded_ds_joints;
 
+    // Flexible origins of dynamic skinning (paper, Sec. "Deformation origin control"): the rotation of an
+    // ancestor joint bends each flexible extremity around its own origin joint, the rest of the shape stays rigid
+    std::set<int> flexible_origin_joints;
+
     // Compute the joint position corresponding to the given animation_name at time t from the animation structure. Then update the skeleton structure in filling the local joint matrix. Finally update the global matrices of the skeleton.
     //  - t can be an arbitrary float values, the animation matrix are interpolated between the frames
     //  - This function doesn't call the Skinning deformation on the rigged_mesh

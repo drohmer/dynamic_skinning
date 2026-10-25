@@ -5,10 +5,7 @@ namespace cgp
 {
 	void camera_controller_first_person_euler::action_mouse_move()
 	{
-		// Preconditions
-		assert_cgp_no_msg(inputs != nullptr);
-		assert_cgp_no_msg(window != nullptr);
-		if (!is_active) return;
+		if (!is_ready()) return;
 
 		vec2 const& p1 = inputs->mouse.position.current;
 		vec2 const& p0 = inputs->mouse.position.previous;
@@ -37,27 +34,13 @@ namespace cgp
 
 	void camera_controller_first_person_euler::action_keyboard()
 	{
-		if ( inputs->keyboard.last_action.is_pressed(GLFW_KEY_C) && inputs->keyboard.shift) {
-			is_cursor_trapped = !is_cursor_trapped;
-			if (is_cursor_trapped)
-				glfwSetInputMode(window->glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-			else
-				glfwSetInputMode(window->glfw_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-		}
-		// Escape also gives back the cursor
-		if (inputs->keyboard.last_action.is_pressed(GLFW_KEY_ESCAPE)) {
-			is_cursor_trapped = false;
-			glfwSetInputMode(window->glfw_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-		}
+		update_cursor_capture();
 	}
 
 
 	void camera_controller_first_person_euler::idle_frame()
 	{
-		// Preconditions
-		assert_cgp_no_msg(inputs != nullptr);
-		assert_cgp_no_msg(window != nullptr);
-		if (!is_active) return;
+		if (!is_ready()) return;
 
 		float const magnitude = 2*inputs->time_interval;
 

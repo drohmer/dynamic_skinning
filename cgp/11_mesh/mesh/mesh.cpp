@@ -18,11 +18,11 @@ namespace cgp
 		assert_cgp_no_msg(N>0);
 		assert_cgp(connectivity.size()>0, "Connectivity doesn't have any triangle");
 
-		if(normal.size()<N)
+		if(size_t(normal.size())<N)
 			normal = normal_per_vertex(position, connectivity);
-		if(color.size()<N)
+		if(size_t(color.size())<N)
 			color.resize(N).fill(vec3{1.0f, 1.0f, 1.0f});
-		if(uv.size()<N)
+		if(size_t(uv.size())<N)
 			uv.resize(N).fill(vec2{0.0f, 0.0f});
 
 		return *this;
@@ -48,10 +48,9 @@ namespace cgp
 	void normal_per_vertex(numarray<vec3> const& position, numarray<uint3> const& connectivity, numarray<vec3>& normals, bool invert)
 	{
 		size_t const N = position.size();
-		if(normals.size()!=N)
+		if(size_t(normals.size())!=N)
 			normals.resize(N);
-		else
-			normals.fill(vec3{0,0,0});
+		normals.fill(vec3{0,0,0});
 
 		size_t const N_tri = connectivity.size();
 		for (size_t k_tri = 0; k_tri < N_tri; ++k_tri)
@@ -126,17 +125,17 @@ namespace cgp
 
 		if (m.normal.size()==0)
 		{std::cout<<warning+"Mesh doesn't have any per-vertex normal defined"<<std::endl; ok=false;}
-		if (m.normal.size()!=N)
+		else if (size_t(m.normal.size())!=N)
 		{std::cout<<warning+"Mesh has incoherent size of per-vertex normal"<<std::endl; ok=false;}
 
 		if(m.uv.size()==0)
 		{std::cout<<warning+"Mesh doesn't have any per-vertex uv defined"<<std::endl; ok=false;}
-		if(m.uv.size()!=N)
+		else if(size_t(m.uv.size())!=N)
 		{std::cout<<warning+"Mesh has incoherent size of per-vertex uv"<<std::endl; ok=false;}
 		
 		if(m.color.size()==0)
 		{std::cout<<warning+"Mesh doesn't have any per-vertex color defined"<<std::endl; ok=false;}
-		if(m.color.size()!=N)
+		else if(size_t(m.color.size())!=N)
 		{std::cout<<warning+"Mesh has incoherent size of per-vertex color"<<std::endl; ok=false;}
 
 		size_t const N_triangle = m.connectivity.size();
@@ -152,7 +151,7 @@ namespace cgp
 			unsigned int f1 = face[1];
 			unsigned int f2 = face[2];
 
-			if (f0 > N || f1 > N || f2 > N)
+			if (f0 >= N || f1 >= N || f2 >= N)
 			{
 				std::cout<<warning+"Triangle "<<str(kt)<<" has index triplet ("<<str(f0)<<","<<str(f1)<<","<<str(f2)<<") exceeding the size of the position ["<<str(N)<<"]"<<std::endl;
 				return false; // critical error
@@ -240,6 +239,13 @@ namespace cgp
 	{
 		for (vec3& p : position)
 			p *= s;
+		// A negative uniform factor mirrors the geometry: flip the stored normals and
+		//  the triangle winding so faces stay consistently oriented outward.
+		if (s < 0) {
+			for (vec3& n : normal)
+				n = -n;
+			flip_connectivity();
+		}
 		return *this;
 	}
 	mesh& mesh::scale(float sx,float sy, float sz)
@@ -249,6 +255,10 @@ namespace cgp
 			p.y *= sy;
 			p.z *= sz;
 		}
+		// A reflection (odd number of negative factors) reverses face orientation:
+		//  flip the winding so the recomputed normals point outward.
+		if (sx*sy*sz < 0)
+			flip_connectivity();
 		normal_update();
 		return *this;
 	}
@@ -280,8 +290,12 @@ namespace cgp
 	mesh& mesh::apply_transform(cgp::affine const& M) {
 		for (vec3& p : position)
 			p = M*p;
+		// Normals transform by the inverse-transpose of the linear part.
+		//  The linear part is diag(scaling_xyz)*scaling*R, so the normal map reduces to
+		//  normalize( diag(1/scaling_xyz) * (R*n) ) (the uniform scaling cancels under normalization).
 		for(vec3& n : normal) {
-			n = M.rotation*n;
+			vec3 const Rn = M.rotation*n;
+			n = normalize(vec3{Rn.x/M.scaling_xyz.x, Rn.y/M.scaling_xyz.y, Rn.z/M.scaling_xyz.z});
 		}
 		return *this;
 	}
@@ -304,12 +318,12 @@ namespace cgp
 	}
 
 
-	numarray<numarray<int> > connectivity_one_ring(numarray<uint3> const& connectivity)
+	numarray<numarray<int> > connectivity_one_ring(numarray<uint3> const& connectivity, int N_vertex)
 	{
-		size_t const N = connectivity.size();
+		size_t const N_tri = connectivity.size();
 		numarray<std::set<int> > one_ring;
-		one_ring.resize(N);
-		for (size_t k = 0; k < N; ++k)
+		one_ring.resize(N_vertex);
+		for (size_t k = 0; k < N_tri; ++k)
 		{
 			uint3 const& tri = connectivity[k];
 			one_ring[ get<0>(tri) ].insert( get<1>(tri) );
@@ -323,8 +337,8 @@ namespace cgp
 		}
 
 		numarray<numarray<int> > one_ring_buffer;
-		one_ring_buffer.resize(N);
-		for(int k=0; k<N; ++k)
+		one_ring_buffer.resize(N_vertex);
+		for(int k=0; k<N_vertex; ++k)
 			for(int idx : one_ring[k])
 				one_ring_buffer[k].push_back(idx);
 		return one_ring_buffer;

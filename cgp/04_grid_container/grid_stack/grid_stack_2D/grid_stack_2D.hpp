@@ -165,38 +165,13 @@ grid_stack_2D<T, N1, N2>& grid_stack_2D<T,N1,N2>::fill(T const& value)
 template <typename T, int N1, int N2>
 void check_index_bounds(int index1, int index2, grid_stack_2D<T,N1,N2> const& data)
 {
-#ifndef cgp_NO_DEBUG
-    if (index1 < 0 || index2<0 || index1>=N1 || index2>=N2)
-    {
-        std::string msg = "\n";
-
-        msg += "\t> Try to access grid_stack_2D(" + str(index1) + "," + str(index2) + ")\n";
-        msg += "\t>    - grid_stack_2D has dimension = (" + str(N1) + "," + str(N2) + ")\n";
-        msg += "\t>    - Type of grid_stack_2D: "+type_str(data)+"\n";
-
-        if (index1<0 || index2<0)
-        {
-            msg += "\t> Buffer cannot be access with negative index.\n";
-        }
-        else if (N1==0 || N2==0)
-        {
-            msg += "\t> The buffer is empty, its elements cannot be accessed.\n";
-        }
-        else if (index1==N1 || index2==N2)
-        {
-            msg += "\t> Index reached the maximal size of the buffer \n";
-            msg += "\t> The maximal possible indexes should be (" + str(N1-1) + ","+ str(N2 - 1) +") \n";
-        }
-        else if (index1>=N1 || index2>=N2)
-        {
-            msg += "\t> Exceeded buffer dimension \n";
-        }
-
-
-        msg += "\n\t  The function and variable that generated this error can be found in analysis the Call Stack.\n";
-
-        error_cgp(msg);
-    }
+#ifndef CGP_NO_DEBUG
+    if (index1 < 0 || index1 >= N1)
+        error_cgp(index_out_of_bounds_message(index1, N1, "x", type_str(data)));
+    if (index2 < 0 || index2 >= N2)
+        error_cgp(index_out_of_bounds_message(index2, N2, "y", type_str(data)));
+#else
+        (void)index1; (void)index2; (void)data;
 #endif
 }
 
@@ -369,7 +344,7 @@ template <typename T, int N1, int N2> grid_stack_2D<T, N1, N2>  operator+(T cons
 
 template <typename T, int N1, int N2> grid_stack_2D<T, N1, N2>& operator-=(grid_stack_2D<T, N1, N2>& a, grid_stack_2D<T, N1, N2> const& b)
 {
-    a.data += b.data;
+    a.data -= b.data;
     return a;
 }
 template <typename T, int N1, int N2> grid_stack_2D<T, N1, N2>& operator-=(grid_stack_2D<T, N1, N2>& a, T const& b)

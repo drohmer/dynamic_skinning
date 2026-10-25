@@ -3,6 +3,7 @@
 #include "cgp/cgp.hpp"
 #include "environment.hpp"
 #include "dynamic_skinning/dynamic_skinning.hpp"
+#include "dynamic_skinning/delayed_lbs.hpp"
 #include "animated_character/animated_model/animated_model.hpp"
 
 
@@ -14,6 +15,8 @@ struct gpu_skinning_state {
     cgp::opengl_texture_image_structure joint_global_tex;       // 2D, 4 x N_joints
     cgp::opengl_texture_image_structure filtered_velocity_tex;  // 2D, 1 x N_joints (pre-filtered angular velocity)
     cgp::opengl_texture_image_structure hier_weights_tex;       // 2D, tiled (static)
+    cgp::opengl_texture_image_structure history_tex;            // 2D, (4 N_history) x N_joints: past local joint matrices (delayed LBS)
+    cgp::opengl_texture_image_structure dlbs_joint_tex;         // 2D, 5 x N_joints (static): B_j^-1, then (parent, d_j) (delayed LBS)
 
     // CPU-side angular velocity tracking using the same tracker as CPU path
     cgp::numarray<angular_velocity_tracker> joint_trackers;
@@ -37,6 +40,7 @@ void gpu_skinning_initialize(gpu_skinning_state& state,
                              animated_model_structure const& model,
                              std::string const& mesh_name,
                              dynamic_skinning_state const& ds_state,
+                             delayed_lbs_state const& dlbs_state,
                              cgp::mesh_drawable& drawable);
 
 // Update per-frame GPU data: skinning matrices, joint globals, filtered velocity.
@@ -44,6 +48,7 @@ void gpu_skinning_update(gpu_skinning_state& state,
                          animated_model_structure const& model,
                          std::string const& mesh_name,
                          dynamic_skinning_parameters const& params,
+                         delayed_lbs_state const& dlbs_state,
                          float time);
 
 // Draw with GPU skinning shader.
@@ -51,4 +56,5 @@ void gpu_skinning_draw(gpu_skinning_state& state,
                        cgp::mesh_drawable& drawable,
                        environment_structure const& env,
                        dynamic_skinning_parameters const& params,
+                       delayed_lbs_state const& dlbs_state,
                        bool display_bend_weights = false);

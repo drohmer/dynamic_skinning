@@ -147,7 +147,7 @@ namespace cgp
 	}
 
 
-	void draw(mesh_drawable const& drawable, environment_generic_structure const& environment, int instance_count, bool expected_uniforms, uniform_generic_structure const& additional_uniforms, GLenum draw_mode)
+	void draw(mesh_drawable const& drawable, environment_generic_structure const& environment, int instance_count, bool expected_uniforms, uniform_generic_structure const& additional_uniforms, GLenum draw_mode, material_mesh_drawable_phong const* material_override)
 	{
 		opengl_check;
 		// Initial clean check
@@ -158,7 +158,7 @@ namespace cgp
 			return;
 
 		assert_cgp(drawable.shader.id != 0, "Try to draw mesh_drawable without shader ");
-		assert_cgp(!glIsShader(drawable.shader.id), "Try to draw mesh_drawable with incorrect shader ");
+		assert_cgp(glIsProgram(drawable.shader.id), "Try to draw mesh_drawable with incorrect shader ");
 		assert_cgp(drawable.texture.id != 0, "Try to draw mesh_drawable without texture ");
 
 		// Set the current shader
@@ -170,6 +170,10 @@ namespace cgp
 
 		// send the uniform values for the model and material of the mesh_drawable
 		drawable.send_opengl_uniform(expected_uniforms);
+
+		// optional material override (e.g. for the wireframe pass): re-sent after, so it wins
+		if (material_override != nullptr)
+			material_override->send_opengl_uniform(drawable.shader, expected_uniforms);
 
 		// send the uniform values for the environment
 		environment.send_opengl_uniform(drawable.shader, expected_uniforms && environment.default_expected_uniform);
@@ -219,22 +223,35 @@ namespace cgp
 		// Clean state
 		// ********************************** //
 		glBindVertexArray(0);
+
+		// Unbind every texture unit that was bound, and restore the active unit to GL_TEXTURE0.
+		//  (the supplementary-texture loop above left the active unit on the last one)
+		int texture_unit_cleanup = 1;
+		for (auto const& element : drawable.supplementary_texture) {
+			glActiveTexture(GL_TEXTURE0 + texture_unit_cleanup); opengl_check;
+			element.second.unbind();
+			texture_unit_cleanup++;
+		}
+		glActiveTexture(GL_TEXTURE0); opengl_check;
 		drawable.texture.unbind();
+
 		glUseProgram(0);
 	}
 
 	void draw_wireframe(mesh_drawable const& drawable, environment_generic_structure const& environment, vec3 const& color, int instance_count, bool expected_uniforms, uniform_generic_structure const& additional_uniforms)
 	{
 #ifndef __EMSCRIPTEN__ 		// Polygon Mode not available in WebGL
-		mesh_drawable wireframe = drawable;
-		wireframe.material.phong = { 1.0f,0.0f,0.0f,64.0f };
-		wireframe.material.color = color;
-		wireframe.material.texture_settings.active = false;
+		// Wireframe material (flat color, no texture). Passed by pointer to draw() so it
+		//  reuses the same drawable - no copy of its textures / supplementary VBOs per call.
+		material_mesh_drawable_phong wireframe_material;
+		wireframe_material.phong = { 1.0f,0.0f,0.0f,64.0f };
+		wireframe_material.color = color;
+		wireframe_material.texture_settings.active = false;
 	
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		glEnable(GL_POLYGON_OFFSET_LINE);
 		glPolygonOffset(-1.0, 1.0);        opengl_check;
-		draw(wireframe, environment, instance_count, expected_uniforms, additional_uniforms);
+		draw(drawable, environment, instance_count, expected_uniforms, additional_uniforms, GL_TRIANGLES, &wireframe_material);
 		glDisable(GL_POLYGON_OFFSET_LINE); opengl_check;
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 #endif

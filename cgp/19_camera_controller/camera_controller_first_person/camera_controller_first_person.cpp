@@ -5,10 +5,7 @@ namespace cgp
 {
 	void camera_controller_first_person::action_mouse_move()
 	{
-		// Preconditions
-		assert_cgp_no_msg(inputs != nullptr);
-		assert_cgp_no_msg(window != nullptr);
-		if (!is_active) return;
+		if (!is_ready()) return;
 
 		vec2 const& p1 = inputs->mouse.position.current;
 		vec2 const& p0 = inputs->mouse.position.previous;
@@ -41,27 +38,13 @@ namespace cgp
 
 	void camera_controller_first_person::action_keyboard()
 	{
-		if ( inputs->keyboard.last_action.is_pressed(GLFW_KEY_C) && inputs->keyboard.shift) {
-			is_cursor_trapped = !is_cursor_trapped;
-			if (is_cursor_trapped)
-				glfwSetInputMode(window->glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-			else
-				glfwSetInputMode(window->glfw_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-		}
-		// Escape also gives back the cursor
-		if (inputs->keyboard.last_action.is_pressed(GLFW_KEY_ESCAPE)) {
-			is_cursor_trapped = false;
-			glfwSetInputMode(window->glfw_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-		}
+		update_cursor_capture();
 	}
 
 
 	void camera_controller_first_person::idle_frame()
 	{
-		// Preconditions
-		assert_cgp_no_msg(inputs != nullptr);
-		assert_cgp_no_msg(window != nullptr);
-		if (!is_active) return;
+		if (!is_ready()) return;
 
 		float const magnitude = 2 * translation_speed * inputs->time_interval;
 		float const angle_magnitude = 2 * rotation_speed * inputs->time_interval;
@@ -73,14 +56,14 @@ namespace cgp
 			camera_model.manipulator_translate_front(-magnitude);          // move back
 
 		if (inputs->keyboard.left || inputs->keyboard.is_pressed(GLFW_KEY_A))
-			camera_model.manipulator_translate_in_plane({ magnitude ,0 }); // move left
+			camera_model.manipulator_translate_in_plane({ -magnitude ,0 }); // move left
 		if (inputs->keyboard.right || inputs->keyboard.is_pressed(GLFW_KEY_D))
-			camera_model.manipulator_translate_in_plane({ -magnitude ,0 }); // move right
+			camera_model.manipulator_translate_in_plane({ magnitude ,0 }); // move right
 
 		if (inputs->keyboard.is_pressed(GLFW_KEY_R))
-			camera_model.manipulator_translate_in_plane({ 0 , -magnitude }); // up
+			camera_model.manipulator_translate_in_plane({ 0 , magnitude }); // up
 		if (inputs->keyboard.is_pressed(GLFW_KEY_F))
-			camera_model.manipulator_translate_in_plane({ 0 , magnitude }); // down
+			camera_model.manipulator_translate_in_plane({ 0 , -magnitude }); // down
 
 		if (inputs->keyboard.is_pressed(GLFW_KEY_Q))
 			camera_model.manipulator_rotate_roll_pitch_yaw(angle_magnitude, 0, 0);  // twist left

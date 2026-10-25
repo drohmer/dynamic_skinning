@@ -3,6 +3,7 @@
 #include "cgp/09_geometric_transformation/interpolation/interpolation.hpp"
 #include "helper/marching_cubes_lut.hpp"
 #include <unordered_map>
+#include <algorithm>
 
 namespace cgp
 {
@@ -27,25 +28,29 @@ namespace cgp
 		// Compute the marching cube
 		std::vector<vec3> position;
 		std::vector<marching_cube_relative_coordinates> relative;
-		int const N = marching_cube(position, field.data.data, domain, iso, &relative);
+		size_t const N = marching_cube(position, field.data.data, domain, iso, &relative);
 
 
 		// Compute the mesh with non-duplicated vertices
 		mesh m;
-		int const N_triangle = N / 3;
+		size_t const N_triangle = N / 3;
 
 		// Storage avoiding to duplicate vertices at the same position if they are on the same voxel edge
 		std::unordered_map<std::pair<int, int>, int, hash_edge> unique_edge;
 
-		for (int k_tri = 0; k_tri < N_triangle; ++k_tri) {
+		for (int k_tri = 0; k_tri < int(N_triangle); ++k_tri) {
 
 			uint3 triangle_index;
 			for (int k = 0; k < 3; ++k) {
 
 				int const idx = 3 * k_tri + k;
 
-				// The indices of the edge of the current vertex
-				std::pair<int, int> const edge = { relative[3 * k_tri+k].k0, relative[3 * k_tri+k].k1 };
+				// The indices of the edge of the current vertex.
+				// Canonicalize as (min,max): adjacent voxels visit a shared edge in opposite
+				//  order, so without this the same vertex would not be welded across voxels.
+				int const edge_k0 = relative[3 * k_tri+k].k0;
+				int const edge_k1 = relative[3 * k_tri+k].k1;
+				std::pair<int, int> const edge = { std::min(edge_k0, edge_k1), std::max(edge_k0, edge_k1) };
 
 				// Check if this edge has already been encountered
 				auto const it = unique_edge.find(edge);

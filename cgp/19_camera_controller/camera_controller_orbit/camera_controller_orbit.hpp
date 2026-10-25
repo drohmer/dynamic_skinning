@@ -11,12 +11,15 @@ namespace cgp
 	{
 		camera_orbit camera_model;
 
-		void action_mouse_move();
-		void idle_frame();
+		camera_generic_base&       camera()       override { return camera_model; }
+		camera_generic_base const& camera() const override { return camera_model; }
+
+		void action_mouse_move() override;
+		void idle_frame() override;
 
 		void look_at(vec3 const& eye, vec3 const& center, vec3 const& up);
 
-		std::string doc_usage() const;
+		std::string doc_usage() const override;
 	};
 
 

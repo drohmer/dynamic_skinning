@@ -35,7 +35,7 @@ namespace cgp
         size_t const N = centers.size();
         
         float t_closest = 0.0f;
-        int index_closest = 0;
+        int index_closest = -1;
         intersection_structure intersection_closest;
         bool first = true;
         for (size_t k = 0; k < N; ++k)
@@ -65,7 +65,11 @@ namespace cgp
     {
         intersection_structure inter;
 
-        float const t = - dot(ray_origin-plane_position, plane_normal)/dot(ray_direction, plane_normal);
+        float const denom = dot(ray_direction, plane_normal);
+        if (std::abs(denom) < 1e-8f) // ray parallel to the plane: no intersection
+            return inter;
+
+        float const t = - dot(ray_origin-plane_position, plane_normal)/denom;
 
         if (t > 0)
         {

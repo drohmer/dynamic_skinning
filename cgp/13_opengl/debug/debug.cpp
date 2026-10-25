@@ -5,15 +5,23 @@
 
 namespace cgp
 {
+	static std::string gl_string_safe(GLenum name)
+	{
+		// glGetString may return nullptr (no active context, or GL error).
+		//  Constructing a std::string from a null const char* is undefined behaviour.
+		GLubyte const* value = glGetString(name);
+		if (value == nullptr)
+			return "(unavailable)";
+		return std::string(reinterpret_cast<char const*>(value));
+	}
+
 	std::string opengl_info_display()
 	{
-        using cgp::str;
-
 		std::string s;
-		s += "[VENDOR]      : " + str((char*)(glGetString(GL_VENDOR))) + "\n";
-		s += "[RENDERER]    : " + str((char*)(glGetString(GL_RENDERER))) + "\n";
-		s += "[VERSION]     : " + str((char*)(glGetString(GL_VERSION))) + "\n";
-		s += "[GLSL VERSION]: " + str((char*)(glGetString(GL_SHADING_LANGUAGE_VERSION))) + "\n";
+		s += "[VENDOR]      : " + gl_string_safe(GL_VENDOR) + "\n";
+		s += "[RENDERER]    : " + gl_string_safe(GL_RENDERER) + "\n";
+		s += "[VERSION]     : " + gl_string_safe(GL_VERSION) + "\n";
+		s += "[GLSL VERSION]: " + gl_string_safe(GL_SHADING_LANGUAGE_VERSION) + "\n";
 
         return s;
 	}
@@ -46,14 +54,23 @@ namespace cgp
     }
 	void check_opengl_error(std::string const& file, std::string const& function, int line)
 	{
-        GLenum error = glGetError();
-        if( error !=GL_NO_ERROR )
+        // The OpenGL error queue can hold several errors: drain it entirely, otherwise
+        //  a stale error would be wrongly attributed to the next opengl_check call.
+        std::string errors;
+        for (GLenum error = glGetError(); error != GL_NO_ERROR; error = glGetError())
+        {
+            if (errors.empty() == false)
+                errors += ", ";
+            errors += opengl_error_to_string(error);
+        }
+
+        if (errors.empty() == false)
         {
             std::string msg = "OpenGL ERROR detected\n"
                     "\tFile "+file+"\n"
                     "\tFunction "+function+"\n"
                     "\tLine "+str(line)+"\n"
-                    "\tOpenGL Error: "+opengl_error_to_string(error);
+                    "\tOpenGL Error: "+errors;
 
             error_cgp(msg);
         }

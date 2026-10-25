@@ -251,5 +251,6 @@ std::vector<legacy_model_entry> get_legacy_models()
         {"Girafe",      "assets/girafe/",       2.0f,  true, {}},
         {"Snail",       "assets/snail/",        1.0f,  false, rotation_transform::from_axis_angle({1, 0, 0}, -Pi / 2)},  // Z-up model
         {"Spot",        "assets/spot/",         1.0f,  false, rotation_transform::from_axis_angle({1, 0, 0}, -Pi / 2)},  // Z-up model
+        {"Train",       "assets/train/",        1.0f,  false, {}},
     };
 }

@@ -24,6 +24,10 @@ void frame_capture_structure::initialize_from_environment()
     if (ds_env != nullptr)
         dynamic_skinning = std::atoi(ds_env);
 
+    char const* delay_env = std::getenv("DS_CAPTURE_DELAY");
+    if (delay_env != nullptr)
+        delay = std::atoi(delay_env);
+
     char const* gpu_env = std::getenv("DS_CAPTURE_GPU");
     if (gpu_env != nullptr)
         gpu = std::atoi(gpu_env);

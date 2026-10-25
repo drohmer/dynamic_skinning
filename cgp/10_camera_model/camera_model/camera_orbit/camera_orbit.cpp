@@ -39,11 +39,11 @@ namespace cgp
 	}
 	void camera_orbit::manipulator_translate_in_plane(vec2 const& tr)
 	{
-		center_of_rotation -= translation_in_plane(tr, orientation_camera);
+		center_of_rotation += translation_in_plane(tr, orientation_camera);
 	}
 	void camera_orbit::manipulator_translate_front(float magnitude)
 	{
-		center_of_rotation -= magnitude * front();
+		center_of_rotation += magnitude * front();
 	}
 
 	void camera_orbit::look_at(vec3 const& eye, vec3 const& center, vec3 const& up)

@@ -51,7 +51,7 @@ namespace cgp
 	affine_rts inverse(affine_rts const& T)
 	{
 		rotation_transform const R_inv = inverse(T.rotation);
-		return affine_rts(R_inv, -(R_inv*T.translation), 1.0f/T.scaling);
+		return affine_rts(R_inv, -(R_inv*T.translation)/T.scaling, 1.0f/T.scaling);
 	}
 
 	affine_rts operator*(affine_rts const& T1, affine_rts const& T2)
@@ -110,7 +110,7 @@ namespace cgp
 
 	std::string type_str(affine_rts const&)
 	{
-		return "affine_rt";
+		return "affine_rts";
 	}
 	std::string str(affine_rts const& T)
 	{

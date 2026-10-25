@@ -63,6 +63,34 @@ namespace cgp_test {
 		}
 
 
+
+		// offset round-trip 2D
+		{
+			assert_cgp_no_msg(cgp::offset_grid(2, 3, 4) == 14); // 2 + 4*3
+			cgp::int2 idx = cgp::index_grid_from_offset(14, 4);
+			assert_cgp_no_msg(idx.x == 2 && idx.y == 3);
+		}
+
+		// compound assignment operators on grid_2D
+		{
+			cgp::grid_2D<int> a(2,2), b(2,2);
+			a(0,0)=1; a(0,1)=2; a(1,0)=3; a(1,1)=4;
+			b(0,0)=5; b(0,1)=6; b(1,0)=7; b(1,1)=8;
+			a += b;
+			assert_cgp_no_msg(a(0,0)==6  && a(0,1)==8  && a(1,0)==10 && a(1,1)==12);
+			a -= b;
+			assert_cgp_no_msg(a(0,0)==1  && a(0,1)==2  && a(1,0)==3  && a(1,1)==4);
+			a *= b;
+			assert_cgp_no_msg(a(0,0)==5  && a(0,1)==12 && a(1,0)==21 && a(1,1)==32);
+		}
+
+		// operator-(scalar, grid_2D) must use b.dimension, not a.dimension
+		{
+			cgp::grid_2D<int> a(2,2);
+			a(0,0)=1; a(0,1)=2; a(1,0)=3; a(1,1)=4;
+			cgp::grid_2D<int> r = 10 - a;
+			assert_cgp_no_msg(r(0,0)==9 && r(0,1)==8 && r(1,0)==7 && r(1,1)==6);
+		}
 	}
 
 
@@ -90,6 +118,28 @@ namespace cgp_test {
 			assert_cgp_no_msg(type_str(a) == "grid_3D<int>");
 		}
 
+
+		// offset round-trip 3D: offset = k1 + N1*(k2 + N2*k3)
+		{
+			assert_cgp_no_msg(cgp::offset_grid(2, 3, 1, 3, 4) == 23); // 2+3*(3+4*1)
+			cgp::int3 idx = cgp::index_grid_from_offset(23, 3, 4);
+			assert_cgp_no_msg(idx.x == 2 && idx.y == 3 && idx.z == 1);
+		}
+
+		// operator+= on grid_3D must return *this
+		{
+			cgp::grid_3D<int> a(2,2,2); a.fill(1);
+			cgp::grid_3D<int> b(2,2,2); b.fill(2);
+			a += b;
+			assert_cgp_no_msg(a(0,0,0)==3 && a(1,1,1)==3);
+		}
+
+		// operator-(scalar, grid_3D) must use b.dimension
+		{
+			cgp::grid_3D<int> a(2,2,2); a.fill(3);
+			cgp::grid_3D<int> r = 10 - a;
+			assert_cgp_no_msg(r(0,0,0)==7 && r(1,1,1)==7);
+		}
 	}
 
 }

@@ -12,6 +12,9 @@ namespace cgp
 	{
 		camera_orbit_euler camera_model;
 
+		camera_generic_base&       camera()       override { return camera_model; }
+		camera_generic_base const& camera() const override { return camera_model; }
+
 		void set_rotation_axis(vec3 const& rotation_axis);
 		void set_rotation_axis_x();
 		void set_rotation_axis_y();
@@ -19,9 +22,9 @@ namespace cgp
 
 		void look_at(vec3 const& eye, vec3 const& center, vec3 const& unused=vec3() /*Only for compatibility*/);
 
-		void action_mouse_move();
-		void idle_frame();
+		void action_mouse_move() override;
+		void idle_frame() override;
 
-		std::string doc_usage() const;
+		std::string doc_usage() const override;
 	};
 }

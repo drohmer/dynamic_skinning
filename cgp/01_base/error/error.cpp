@@ -7,6 +7,36 @@
 namespace cgp
 {
 
+std::string index_out_of_bounds_message(long long index, long long axis_size, std::string const& axis_label, std::string const& container_type)
+{
+    std::string const idx = std::to_string(index);
+    std::string const N   = std::to_string(axis_size);
+
+    std::string msg = "\n";
+    msg += "\t> Out-of-bounds access on container " + container_type + "\n";
+    msg += "\t>    - " + axis_label + " = " + idx + " is outside the valid range [0, " + std::to_string(axis_size - 1) + "]";
+    msg += "  (axis size = " + N + ")\n";
+
+    if (index < 0)
+    {
+        msg += "\t> A container cannot be accessed with a negative index.\n";
+        msg += "\t  Help: contrary to Python, a negative index in C++ does not target the end of the container.\n";
+    }
+    else if (axis_size == 0)
+    {
+        msg += "\t> The container is empty: its elements cannot be accessed.\n";
+        msg += "\t  Help: you may need to resize() / initialize the container before accessing it.\n";
+    }
+    else
+    {
+        msg += "\t> The index reached or exceeded the size of the container.\n";
+        msg += "\t  Help: indices start at 0; a typical loop runs from index=0 while index<size().\n";
+    }
+
+    msg += "\t  (The function and variable that generated this error can be found in the Call Stack.)\n\n";
+    return msg;
+}
+
 static std::map<std::string, int> warning_storage;
 int cgp_warning::max_warning = 4;
 

@@ -109,7 +109,7 @@ namespace cgp
         unsigned error = lodepng::encode(filename, im.data.data, im.width, im.height, lodepng_color_type);
         if ( error )
         {
-            std::cerr<<"Error Loading png file "<<filename<<std::endl;
+            std::cerr<<"Error Saving png file "<<filename<<std::endl;
             std::cerr<<"Decoder error " << error << ": " << lodepng_error_text(error) << std::endl;
             exit(1);
         }
@@ -140,6 +140,7 @@ namespace cgp
         int actual_comps = 0;
 
         unsigned char* p = jpgd::decompress_jpeg_image_from_file(filename.c_str(), &width, &height, &actual_comps, 3);
+        assert_cgp(p != nullptr, "Failed to decode JPEG file " + filename);
 
         image_structure im;
         im.color_type = image_color_type::rgb;
@@ -150,6 +151,7 @@ namespace cgp
         im.data.resize(N);
         for (int k = 0; k < N; ++k)
             im.data[k] = p[k];
+        free(p);
 
         return im;
     }

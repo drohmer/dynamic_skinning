@@ -3,8 +3,8 @@
 namespace cgp
 {
 
-	/** Uniform random distribution defined on the interval [value_min, value_max]
-	* default call rand_interval() generates uniform in [0,1]	*/
+	/** Uniform random distribution defined on the interval [value_min, value_max)
+	* default call rand_uniform() generates uniform in [0,1)	*/
 	float rand_uniform(float const value_min=0.0f, float const value_max=1.0f);
 
 	/** Normal random distribution with specified averaged and stddev

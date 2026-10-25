@@ -1,6 +1,5 @@
 #include "timer_event_periodic.hpp"
 
-#include <GLFW/glfw3.h>
 
 namespace cgp
 {

@@ -40,7 +40,7 @@ namespace cgp
 	void draw(trajectory_drawable const& drawable, environment_generic_structure const& environment)
 	{
 		if (drawable.current_size > 0) {
-			draw(drawable.visual, environment);
+			draw(drawable.visual, environment, int(drawable.current_size));
 		}
 	}
 }

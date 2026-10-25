@@ -30,6 +30,11 @@ namespace cgp
 		// If the shader fails to load, the value load_shader_ok is set to false (if it is not nullptr). The program doesn't crash if the shader cannot be loaded.
 		void load_from_inline_text(std::string const& vertex_shader_text, std::string const& fragment_shader_text, bool *load_shader_ok=nullptr);
 
+		// Release the GPU program and reset this structure to the empty state.
+		//  Also invalidates the uniform-location cache entries of this program id.
+		//  Safe to call on an empty shader (id==0): does nothing.
+		void clear();
+
 		// Query the location of a uniform variable using the cache system
 		GLint query_uniform_location(std::string const& uniform_name) const;
 

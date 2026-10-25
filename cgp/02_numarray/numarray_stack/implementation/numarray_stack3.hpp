@@ -53,8 +53,8 @@ namespace cgp
         T const* cbegin() const;
         T const* cend() const;
 
-        T const& at_unsafe(int index) const { return (&x)[index]; }
-        T& at_unsafe(int index) { return (&x)[index]; }
+        T const& coeff(int index) const { return (&x)[index]; }
+        T& coeff(int index) { return (&x)[index]; }
 
         /** Sub-vector */
         numarray_stack<T,2> xy() const;
@@ -105,18 +105,13 @@ namespace cgp
         return *this;
     }
 
-#ifndef cgp_NO_DEBUG
+#ifndef CGP_NO_DEBUG
     template <typename T, int N, typename INDEX_TYPE>
     void check_index_bounds(INDEX_TYPE index, numarray_stack<T, 3> const& data)
     {
 
-        if (index < 0 || index>2)
-        {
-            std::string msg = "\n";
-            msg += " - Try access " + type_str(data) + "[" + str(index) + "]\n";
-            msg += " - Indexing is limited to 0, 1, 2";
-            error_cgp(msg);
-        }
+        if (index < 0 || index > 2)
+            error_cgp(index_out_of_bounds_message((long long)index, 3, "index", type_str(data)));
     }
 #else
     template <typename T, int N, typename INDEX_TYPE>

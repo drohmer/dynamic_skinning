@@ -474,7 +474,7 @@ skeleton_animation_structure build_cthulhu_head_shake(skeleton_structure const& 
     float const angle_nod   =  8.0f * Pi / 180.0f;  // head nod (down)
     float const angle_tail  =  8.0f * Pi / 180.0f;  // tail swing (sideways)
     float const angle_arm   = 12.0f * Pi / 180.0f;  // arms reaching forward
-    float const angle_leg   = 10.0f * Pi / 180.0f;  // legs kicking forward
+    float const angle_leg   =  7.0f * Pi / 180.0f;  // legs moving forward (slowly)
 
     auto joint = [&](char const* name) { return find_joint(skeleton, name); };
     auto position = [&](int j) { return skeleton.joint_matrix_global[j].get_block_translation(); };
@@ -515,9 +515,10 @@ skeleton_animation_structure build_cthulhu_head_shake(skeleton_structure const& 
     std::vector<float> const wing_value     = { 0, 1, 1, -0.5f, -0.5f, 0,  0, 1, 1, 0 };
     std::vector<float> const arm_time       = { 0.3f, 0.7f, 1.8f, 2.3f,  5.6f, 6.0f, 7.0f, 7.4f };
     std::vector<float> const arm_value      = { 0, 1, 1, 0,  0, 1, 1, 0 };
-    std::vector<float> const leg_L_time     = { 0.5f, 0.9f, 1.8f, 2.2f,  5.8f, 6.2f, 7.0f, 7.4f };
+    // (legs: slower moves, the spikes and claws stretch quickly)
+    std::vector<float> const leg_L_time     = { 0.4f, 1.1f, 1.8f, 2.5f,  5.6f, 6.3f, 7.0f, 7.7f };
     std::vector<float> const leg_L_value    = { 0, 1, 1, 0,  0, 1, 1, 0 };
-    std::vector<float> const leg_R_time     = { 2.6f, 3.0f, 3.9f, 4.3f,  5.8f, 6.2f, 7.0f, 7.4f };
+    std::vector<float> const leg_R_time     = { 2.6f, 3.3f, 4.0f, 4.7f,  5.6f, 6.3f, 7.0f, 7.7f };
     std::vector<float> const leg_R_value    = { 0, 1, 1, 0,  0, 1, 1, 0 };
     std::vector<float> const nod_time       = { 0.3f, 0.7f, 1.8f, 2.2f,  5.7f, 6.0f, 7.0f, 7.3f };
     std::vector<float> const nod_value      = { 0, 1, 1, 0,  0, 1, 1, 0 };
@@ -552,6 +553,40 @@ skeleton_animation_structure build_cthulhu_head_shake(skeleton_structure const& 
         pose = rotate_joint(skeleton, pose, arm_L, lateral, sign_arm_L * angle_arm * arm);
         pose = rotate_joint(skeleton, pose, leg_L, lateral, sign_leg_L * angle_leg * kick_L);
         pose = rotate_joint(skeleton, pose, leg_R, lateral, sign_leg_R * angle_leg * kick_R);
+        return pose;
+    };
+
+    return build_sampled_animation(skeleton, pose_at, duration, 1.0f / 60.0f);
+}
+
+
+skeleton_animation_structure build_train_bumps(skeleton_structure const& skeleton)
+{
+    // Tunable parameters (lengths in the units of the train asset, its height is about 2.6)
+    float const duration    = 6.0f;                   // (s) loop
+    float const bump_time   = 0.35f;                  // (s) duration of a bump (up and down)
+    float const bump_height = 0.6f;                   // height of the largest bump
+    float const angle_roll  = 10.0f * Pi / 180.0f;    // roll of the largest bump (around the train axis)
+    // Start time, relative height and roll side of each bump
+    struct bump { float start; float height; float roll; };
+    std::vector<bump> const bumps = { {0.5f, 1.0f, 1.0f}, {2.3f, 0.6f, -1.0f}, {3.6f, 0.8f, 1.0f} };
+
+    int const engine = 0;  // root joint, at the front of the engine
+    vec3 const axis_train = {1, 0, 0};
+    pose_structure const rest = rest_pose(skeleton);
+
+    auto pose_at = [&](float t) {
+        float height = 0.0f, roll = 0.0f;
+        for (auto const& b : bumps) {
+            float const u = (t - b.start) / bump_time;
+            if (u > 0.0f && u < 1.0f) {
+                float const profile = std::sin(Pi * u);  // up and down, zero velocity at the top
+                height += b.height * profile;
+                roll += b.roll * b.height * std::sin(Pi * u) * profile;
+            }
+        }
+        pose_structure pose = rotate_joint(skeleton, rest, engine, axis_train, angle_roll * roll);
+        pose[engine] = mat4::build_translation(0.0f, bump_height * height, 0.0f) * pose[engine];
         return pose;
     };
 

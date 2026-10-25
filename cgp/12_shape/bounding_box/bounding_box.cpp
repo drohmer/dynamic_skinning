@@ -20,7 +20,7 @@ void bounding_box::initialize(numarray<vec3> const& position)
 
 }
 
-bool bounding_box::inside(vec3 const& p){
+bool bounding_box::inside(vec3 const& p) const {
     return (p.x>=p_min.x && p.x<=p_max.x)
     && (p.y>=p_min.y && p.y<=p_max.y)
     && (p.z>=p_min.z && p.z<=p_max.z);

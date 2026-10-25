@@ -53,7 +53,7 @@ namespace cgp
         return mat4{
             (right-left)/2, 0, 0, (right+left)/2, 
             0, (top-bottom)/2, 0, (top+bottom)/2, 
-            0, 0, -(z_far-z_near)/2, (z_far+z_near)/2,
+            0, 0, -(z_far-z_near)/2, -(z_far+z_near)/2,
             0,0,0, 1
         };
     }

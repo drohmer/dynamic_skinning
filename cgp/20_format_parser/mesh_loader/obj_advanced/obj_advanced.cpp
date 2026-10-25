@@ -9,9 +9,8 @@ namespace cgp
 	{
 		std::vector<cgp::mesh_drawable> convert_to_mesh_drawable(std::vector<shape_element_node> const& elements)
 		{
-			int N = elements.size();
 			std::vector<mesh_drawable> drawables;
-			drawables.resize(N);
+			drawables.resize(elements.size());
 			for (int k = 0; k < elements.size(); ++k)
 			{
 				mesh m = elements[k].mesh_element;
@@ -32,10 +31,8 @@ namespace cgp
 		tinyobj::ObjReader reader;
 
 		if (!reader.ParseFromFile(inputfile, reader_config)) {
-			if (!reader.Error().empty()) {
-				std::cerr << "TinyObjReader: " << reader.Error();
-			}
-			exit(1);
+			std::string const error_msg = reader.Error().empty() ? "unknown error" : reader.Error();
+			assert_cgp(false, "mesh_load_file_obj_advanced: cannot parse "+inputfile+": "+error_msg);
 		}
 
 		if (!reader.Warning().empty()) {
@@ -131,7 +128,7 @@ namespace cgp
 				if (f == shapes[shape_idx].mesh.num_face_vertices.size() - 1) {
 					mesh_obj_advanced_loader::shape_element_node node;
 					node.mesh_element = mesh_current;
-					node.texture_element = texture_array[idx_material];
+					node.texture_element = (idx_material >= 0) ? texture_array[idx_material] : mesh_drawable::default_texture;
 					data.push_back(node);
 				}
 			}

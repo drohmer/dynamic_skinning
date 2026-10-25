@@ -9,45 +9,49 @@ namespace cgp
     float noise_perlin(float x, int octave, float persistency, float frequency_gain)
     {
         float value = 0.0f;
-        float a = 1.0f; // current magnitude
-        float f = 1.0f; // current frequency
-        for(int k=0;k<octave;k++)
+        float a = 1.0f;
+        float f = 1.0f;
+        float a_sum = 0.0f;
+        for(int k=0; k<octave; k++)
         {
-            const float n = static_cast<float>(snoise1(x*f));
-            value += a*(0.5f+0.5f*n);
+            value += a*(0.5f + 0.5f*static_cast<float>(snoise1(x*f)));
+            a_sum += a;
             f *= frequency_gain;
             a *= persistency;
         }
-        return value;
+        return value / a_sum;
     }
 
     float noise_perlin(vec2 const& p, int octave, float persistency, float frequency_gain)
     {
         float value = 0.0f;
-        float a = 1.0f; // current magnitude
-        float f = 1.0f; // current frequency
-        for(int k=0;k<octave;k++)
+        float a = 1.0f;
+        float f = 1.0f;
+        float a_sum = 0.0f;
+        for(int k=0; k<octave; k++)
         {
-            const float n = static_cast<float>(snoise2(p.x*f, p.y*f));
-            value += a*(0.5f+0.5f*n );
+            value += a*(0.5f + 0.5f*static_cast<float>(snoise2(p.x*f, p.y*f)));
+            a_sum += a;
             f *= frequency_gain;
             a *= persistency;
         }
-        return value;
+        return value / a_sum;
     }
+
     float noise_perlin(vec3 const& p, int octave, float persistency, float frequency_gain)
     {
         float value = 0.0f;
-        float a = 1.0f; // current magnitude
-        float f = 1.0f; // current frequency
-        for(int k=0;k<octave;k++)
+        float a = 1.0f;
+        float f = 1.0f;
+        float a_sum = 0.0f;
+        for(int k=0; k<octave; k++)
         {
-            const float n = static_cast<float>(snoise3(p.x*f, p.y*f, p.z*f));
-            value += a*(0.5f+0.5f*n);
+            value += a*(0.5f + 0.5f*static_cast<float>(snoise3(p.x*f, p.y*f, p.z*f)));
+            a_sum += a;
             f *= frequency_gain;
             a *= persistency;
         }
-        return value;
+        return value / a_sum;
     }
 
 }

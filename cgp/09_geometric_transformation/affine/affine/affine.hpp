@@ -42,8 +42,11 @@ namespace cgp
 	mat4 operator*(affine const& T1, mat3 const& T2);
 	mat4 operator*(mat3 const& T1, affine const& T2);
 
-
-	affine inverse(affine const& T);
+	// Note: no inverse(affine) is provided on purpose.
+	//  With a non-uniform scaling_xyz, the affine struct (which always applies the scaling
+	//  after the rotation, i.e. diag(s_xyz)*R) cannot exactly represent its own inverse
+	//  R^T*diag(1/s_xyz). Rather than returning a silently wrong result, the inverse is not
+	//  offered: use affine_rt / affine_rts (whose inverse is always exact) when an inverse is needed.
 
 	std::string type_str(affine const& );
 	std::string str(affine const& T);

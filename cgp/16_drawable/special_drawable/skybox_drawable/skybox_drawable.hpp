@@ -24,7 +24,7 @@ namespace cgp {
 		opengl_ebo_structure ebo_connectivity;
 
 		// VAO indicating the VBO organization
-		GLuint vao;
+		GLuint vao = 0;
 
 		// Uniform model matrix
 		affine model;

@@ -1,6 +1,7 @@
 #include "dynamic_skinning.hpp"
 #include "oscillation_filter.hpp"
 #include <map>
+#include <vector>
 #include <chrono>
 
 using namespace cgp;
@@ -70,10 +71,18 @@ void dynamic_skinning_initialize(dynamic_skinning_state& state,
     // (Algorithm 1 / eq. 6: β_ij = Σ_{j_k ∈ D(j)} α_{ij_k})
     state.joints_per_vertex.resize(N_vertex);
     state.hierarchical_weights.resize(N_vertex);
+    state.center_joints_per_vertex.resize(N_vertex);
     for (int k = 0; k < N_vertex; ++k) {
         state.joints_per_vertex[k].clear();
         state.hierarchical_weights[k].clear();
+        state.center_joints_per_vertex[k].clear();
     }
+
+    // Flexible origins below each joint (strict descendants)
+    std::map<int, std::vector<int>> origins_below_joint;
+    for (int m : model.flexible_origin_joints)
+        for (int j = model.skeleton.parent_index[m]; j >= 0; j = model.skeleton.parent_index[j])
+            origins_below_joint[j].push_back(m);
 
     state.filtered_angular_velocity.resize(N_skeleton_joints);
     state.filtered_angular_velocity.fill({0, 0, 0});
@@ -102,8 +111,24 @@ void dynamic_skinning_initialize(dynamic_skinning_state& state,
             // Filter out excluded joints (e.g. FBones for cthulhu model)
             if (model.excluded_ds_joints.count(entry.first) > 0)
                 continue;
+
+            // Joint above flexible origins: only the part of the vertex in each flexible extremity
+            // (weight β_im) is bent, around the origin q_m; the remaining part (rigid base) is not deformed
+            auto const it = origins_below_joint.find(entry.first);
+            if (it != origins_below_joint.end()) {
+                for (int m : it->second) {
+                    auto const beta_m = beta_per_joint.find(m);
+                    if (beta_m == beta_per_joint.end()) continue;
+                    state.joints_per_vertex[k_vertex].push_back(entry.first);
+                    state.hierarchical_weights[k_vertex].push_back(beta_m->second);
+                    state.center_joints_per_vertex[k_vertex].push_back(m);
+                }
+                continue;
+            }
+
             state.joints_per_vertex[k_vertex].push_back(entry.first);
             state.hierarchical_weights[k_vertex].push_back(entry.second);
+            state.center_joints_per_vertex[k_vertex].push_back(entry.first);
         }
     }
 }
@@ -164,8 +189,8 @@ void dynamic_skinning_apply(dynamic_skinning_state& state,
         vec3 const& omega = state.filtered_angular_velocity[j];
         float on = norm(omega);
         joint_active[j] = (on >= 1e-2f);
+        joint_data[j].position = model.skeleton.joint_matrix_global[j].get_block_translation();  // also used as a rotation center
         if (joint_active[j]) {
-            joint_data[j].position   = model.skeleton.joint_matrix_global[j].get_block_translation();
             joint_data[j].omega_dir  = omega / on;
             joint_data[j].omega_norm = on;
         }
@@ -176,6 +201,7 @@ void dynamic_skinning_apply(dynamic_skinning_state& state,
     for (int i = 0; i < N_vertex; ++i) {
         auto const& joints = state.joints_per_vertex[i];
         auto const& weights = state.hierarchical_weights[i];
+        auto const& centers = state.center_joints_per_vertex[i];
         vec3 const& p_vertex = mesh_deformed.position[i];
         float w_bend = bend_base * state.weight_bend[i];
 
@@ -185,7 +211,7 @@ void dynamic_skinning_apply(dynamic_skinning_state& state,
 
             float beta_ij = weights[k];                                    // eq. 6
             vec3 const& omega_dir = joint_data[j].omega_dir;
-            vec3 const& p_joint   = joint_data[j].position;
+            vec3 const& p_joint   = joint_data[centers[k]].position;           // q_j, or the flexible origin
             float omega_norm      = joint_data[j].omega_norm;
 
             // ‖Ω × u‖ = ‖Ω‖ · ‖ω × u‖  where ω = Ω/‖Ω‖

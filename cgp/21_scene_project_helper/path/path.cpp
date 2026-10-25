@@ -18,7 +18,7 @@ namespace cgp {
 		success = false;
 		int k_attempt = 0;
 		std::string current_root = "";
-		for (k_attempt = 0; k_attempt < attempt_root.size() && !success; ++k_attempt) {
+		for (k_attempt = 0; k_attempt < int(attempt_root.size()) && !success; ++k_attempt) {
 			current_root = attempt_root[k_attempt];
 			success = cgp::check_path_exist(current_root + directory_to_find);
 		}
@@ -37,7 +37,7 @@ namespace cgp {
 		size_t pos_last_slash = executable_path.find_last_of(character_dir_split);
 		if (pos_last_slash < executable_path.size()) {
 			executable_dir_out = executable_path.substr(0, pos_last_slash + 1);
-			executable_name_out = executable_path.substr(pos_last_slash + 1, executable_path.size() - 1);
+			executable_name_out = executable_path.substr(pos_last_slash + 1, executable_path.size() - pos_last_slash - 1);
 		}
 		else { //possibly local directory
 			executable_dir_out = "";
@@ -46,9 +46,8 @@ namespace cgp {
 
 		// Remove dots in case of .exe
 		if (executable_name_out.size() > 4) {
-			int N = executable_name_out.size();
 			size_t pos_first_dot = executable_name_out.find_first_of('.');
-			if (pos_first_dot < N)
+			if (pos_first_dot != std::string::npos)
 				executable_name_out = executable_name_out.substr(0, pos_first_dot);
 		}
 	}
@@ -65,7 +64,7 @@ namespace cgp {
 
 		if (found_shader_dir == false) {
 			display_error_file_access(directory_to_find);
-			exit(0); // Note: this is not an error of the program.
+			exit(1); // Note: this is not an error of the program.
 		}
 
 		std::string full_path_to_directory;
@@ -82,7 +81,7 @@ namespace cgp {
 		if (cgp::check_path_exist(full_path_to_directory) == false) {
 			std::cout << "Error cannot find the path: " << full_path_to_directory << std::endl;
 			std::cout << "Please check this directory does exists, otherwise the shaders won't be able to load." << std::endl;
-			exit(0);
+			exit(1);
 		}
 
 		return project;

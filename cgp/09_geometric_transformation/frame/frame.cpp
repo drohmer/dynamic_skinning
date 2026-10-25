@@ -27,15 +27,15 @@ namespace cgp {
 
 		vec3 frame::ux() const
 		{
-			return orientation.matrix_row_x();
+			return orientation.matrix_col_x();
 		}
 		vec3 frame::uy() const
 		{
-			return orientation.matrix_row_y();
+			return orientation.matrix_col_y();
 		}
 		vec3 frame::uz() const
 		{
-			return orientation.matrix_row_z();
+			return orientation.matrix_col_z();
 		}
 		mat4 frame::matrix() const
 		{
