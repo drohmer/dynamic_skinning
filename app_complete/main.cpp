@@ -73,6 +73,10 @@ int main(int, char* argv[])
 			scene.use_gpu_skinning = (capture.gpu == 1);
 		if (capture.dynamic_skinning >= 0)
 			scene.ds_params.active = (capture.dynamic_skinning == 1);
+		if (capture.skeleton >= 0) {
+			scene.gui.display_skeleton_bones = (capture.skeleton == 1);
+			scene.gui.display_skeleton_joints = (capture.skeleton == 1);
+		}
 		if (capture.delay >= 0)
 			scene.ds_params.delay_active = (capture.delay == 1);
 		if (capture.fps > 0) {

@@ -32,6 +32,10 @@ void frame_capture_structure::initialize_from_environment()
     if (fps_env != nullptr)
         fps = float(std::atof(fps_env));
 
+    char const* skeleton_env = std::getenv("DS_CAPTURE_SKELETON");
+    if (skeleton_env != nullptr)
+        skeleton = std::atoi(skeleton_env);
+
     char const* gpu_env = std::getenv("DS_CAPTURE_GPU");
     if (gpu_env != nullptr)
         gpu = std::atoi(gpu_env);
