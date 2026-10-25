@@ -1,5 +1,7 @@
 # Dynamic Skinning
 
+[![Build](https://github.com/drohmer/dynamic_skinning/actions/workflows/build.yml/badge.svg)](https://github.com/drohmer/dynamic_skinning/actions/workflows/build.yml)
+
 Implementation of the paper:
 
 > **Dynamic Skinning: Kinematics-Driven Cartoon Effects for Articulated Characters**<br>

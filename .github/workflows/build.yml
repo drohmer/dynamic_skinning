@@ -1,0 +1,52 @@
+# Builds the two applications on Linux, Windows and macOS, and runs the replicability script on Linux
+# (software OpenGL rendering in a virtual display); the frames of the teaser are available as an artifact.
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake pkg-config libglfw3-dev libgl1-mesa-dev libgl1-mesa-dri xvfb
+      - name: Build
+        run: |
+          cmake -S code -B code/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build code/build -j 4
+      - name: Reproduce the teaser figure
+        run: |
+          xvfb-run -a -s "-screen 0 1920x1080x24" bash replicability/teaser.sh
+          count=$(find replicability/output/teaser -name "*.png" | wc -l)
+          echo "$count frames"
+          test "$count" -eq 41
+      - uses: actions/upload-artifact@v4
+        with:
+          name: teaser-frames
+          path: replicability/output/teaser
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          cmake -S code -B code/build
+          cmake --build code/build --config Release
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the dependencies
+        run: brew install pkg-config glfw
+      - name: Build
+        run: |
+          cmake -S code -B code/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build code/build -j 4
