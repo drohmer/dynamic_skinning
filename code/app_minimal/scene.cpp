@@ -27,7 +27,7 @@ void scene_structure::load_model(std::string const& name)
 		for (auto const& m : get_legacy_models())
 			if (m.name == name)
 				character = load_legacy_character(project::path + m.directory, m.scaling, m.invert_normals, m.rotation);
-		if (name == "Girafe") character.animated_model.animation["Swing"] = build_girafe_neck_swing(character.animated_model.skeleton);
+		if (name == "Giraffe") character.animated_model.animation["Swing"] = build_giraffe_neck_swing(character.animated_model.skeleton);
 		if (name == "Clown")  character.animated_model.animation["Swing"] = build_clown_swing(character.animated_model.skeleton);
 		character.set_current_animation("Swing");
 	}
@@ -39,7 +39,7 @@ void scene_structure::load_model(std::string const& name)
 
 	// Camera: eye, center of rotation, up vector
 	if (name == "Cylinder") camera_control.look_at({1.67f, 0.24f, 3.46f}, {-0.49f, 0.18f, 0.20f}, {0, 1, 0});
-	if (name == "Girafe")   camera_control.look_at({1.04f, 0.35f, 3.55f}, {0.00f, 0.10f, 0.05f}, {0, 1, 0});
+	if (name == "Giraffe")   camera_control.look_at({1.04f, 0.35f, 3.55f}, {0.00f, 0.10f, 0.05f}, {0, 1, 0});
 	if (name == "Clown")    camera_control.look_at({0.79f, 0.58f, 3.17f}, {0.00f, 0.10f, 0.00f}, {0, 1, 0});
 
 	character.timer.start();
@@ -83,7 +83,7 @@ void scene_structure::display_gui()
 {
 	ImGui::Begin("Dynamic Skinning", NULL, ImGuiWindowFlags_AlwaysAutoResize);
 
-	char const* models[] = {"Cylinder", "Girafe", "Clown"};
+	char const* models[] = {"Cylinder", "Giraffe", "Clown"};
 	for (char const* m : models) {
 		if (ImGui::RadioButton(m, model_name == m) && model_name != m)
 			load_model(m);

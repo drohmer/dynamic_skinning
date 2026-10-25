@@ -45,7 +45,7 @@ void scene_structure::display_gui()
 	ImGui::SetNextItemWidth(160);
 	if (ImGui::BeginCombo("Model", current_model_name.c_str())) {
 		// Display order: models with a pre-designed animation first, then the other legacy models
-		std::vector<std::string> model_names = {"Cylinder", "Girafe", "Clown", "Spot", "Snail", "Dragon", "Cthulhu", "Train"};
+		std::vector<std::string> model_names = {"Cylinder", "Giraffe", "Clown", "Spot", "Snail", "Dragon", "Cthulhu", "Train"};
 		for (auto const& m : get_legacy_models())
 			if (std::find(model_names.begin(), model_names.end(), m.name) == model_names.end())
 				model_names.push_back(m.name);

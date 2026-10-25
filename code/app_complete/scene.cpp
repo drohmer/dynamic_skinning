@@ -77,8 +77,8 @@ void scene_structure::load_model(std::string const& name)
 	}
 
 	// Pre-designed animations (built on the rest pose, before normalization)
-	if (name == "Girafe") {
-		character.animated_model.animation["Neck swing"] = build_girafe_neck_swing(character.animated_model.skeleton);
+	if (name == "Giraffe") {
+		character.animated_model.animation["Neck swing"] = build_giraffe_neck_swing(character.animated_model.skeleton);
 		character.set_current_animation("Neck swing");
 	}
 	if (name == "Clown") {
@@ -126,7 +126,7 @@ void scene_structure::load_model(std::string const& name)
 			{"Cthulhu",  {0.508f, -0.751f, 0.067f}, {0.000f, -0.060f, 0.080f}, 0.857f, {-0.118f, -0.106f, 0.987f}},
 			{"Clown",    {0.790f, 0.575f, 3.170f},  {0.000f, 0.100f, 0.000f},   3.300f, {0, 1, 0}},
 			{"Dragon",   {-2.700f, 0.500f, 0.600f},  {0.000f, 0.100f, 0.000f},   2.600f, {0, 1, 0}},
-			{"Girafe",   {1.035f, 0.351f, 3.551f},  {0.000f, 0.100f, 0.050f},  3.659f, {0, 1, 0}},
+			{"Giraffe",   {1.035f, 0.351f, 3.551f},  {0.000f, 0.100f, 0.050f},  3.659f, {0, 1, 0}},
 			{"Snail",    {1.600f, 0.700f, 2.900f},  {0.100f, 0.000f, 0.000f},   3.300f, {0, 1, 0}},
 			{"Spot",     {2.490f, 0.850f, -2.590f}, {0.000f, 0.100f, -0.100f}, 3.600f, {0, 1, 0}},
 			{"Train",    {0.850f, 0.350f, 1.500f},  {-0.050f, -0.020f, 0.000f}, 1.750f, {0, 1, 0}},
@@ -510,26 +510,26 @@ void scene_structure::mouse_move_event()
 	}
 
 	if (camera_mode) {
-		// Mode caméra : comportement standard du framework
-		// (clic gauche = rotation, clic droit = zoom, Ctrl + clic = translation)
+		// Camera mode: standard behavior of the framework
+		// (left click = rotation, right click = zoom, Ctrl + click = translation)
 		camera_control.action_mouse_move();
 		picking.joint_hover = -1;
 		return;
 	}
 
-	// Mode bone-edit :
-	// Shift + clic gauche → rotation caméra (arcball)
+	// Bone-edit mode:
+	// Shift + left click → camera rotation (arcball)
 	if (inputs.mouse.click.left && inputs.keyboard.shift && !on_gui) {
 		picking.joint_hover = -1;
 		camera_control.camera_model.manipulator_rotate_arcball(p0, p1);
 	}
-	// Shift + clic droit → zoom
+	// Shift + right click → zoom
 	else if (inputs.mouse.click.right && inputs.keyboard.shift && !on_gui) {
 		picking.joint_hover = -1;
 		camera_control.camera_model.manipulator_scale_distance_to_center((p1 - p0).y);
 	}
 	else {
-		// Clic gauche → rotation du joint, clic droit → twist du joint
+		// Left click → joint rotation, right click → joint twist
 		auto& skeleton = character.animated_model.skeleton;
 
 		if (picking.is_selected) {
@@ -552,11 +552,11 @@ void scene_structure::mouse_move_event()
 void scene_structure::mouse_click_event()
 {
 	if (camera_mode || inputs.keyboard.shift) {
-		// Mode caméra ou Shift → pas de picking
+		// Camera mode or Shift → no picking
 		return;
 	}
 
-	// Mode bone-edit : clic gauche = rotation, clic droit = twist
+	// Bone-edit mode: left click = rotation, right click = twist
 	auto& skeleton = character.animated_model.skeleton;
 
 	bool click_left  = (inputs.mouse.click.last_action == last_mouse_cursor_action::click_left);
@@ -564,7 +564,7 @@ void scene_structure::mouse_click_event()
 	bool release     = (inputs.mouse.click.last_action == last_mouse_cursor_action::release_left) ||
 	                   (inputs.mouse.click.last_action == last_mouse_cursor_action::release_right);
 
-	// Clic sur la GUI → pas de picking (le relâchement reste traité pour terminer un drag)
+	// Click on the GUI → no picking (the release is still handled, to end a drag)
 	if (inputs.mouse.on_gui && (click_left || click_right))
 		return;
 

@@ -247,7 +247,7 @@ std::vector<legacy_model_entry> get_legacy_models()
     return {
         {"Clown",       "assets/clown/",        1.0f,  false, {}},
         {"Dragon",      "assets/dragon/",       0.09f, false, {}},
-        {"Girafe",      "assets/girafe/",       2.0f,  true, {}},
+        {"Giraffe",      "assets/giraffe/",       2.0f,  true, {}},
         {"Snail",       "assets/snail/",        1.0f,  false, rotation_transform::from_axis_angle({1, 0, 0}, -Pi / 2)},  // Z-up model
         {"Spot",        "assets/spot/",         1.0f,  false, rotation_transform::from_axis_angle({1, 0, 0}, -Pi / 2)},  // Z-up model
         {"Train",       "assets/train/",        1.0f,  false, {}},

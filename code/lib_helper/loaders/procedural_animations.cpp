@@ -126,7 +126,7 @@ skeleton_animation_structure build_left_right_swing(skeleton_structure const& sk
 }
 
 
-skeleton_animation_structure build_girafe_neck_swing(skeleton_structure const& skeleton)
+skeleton_animation_structure build_giraffe_neck_swing(skeleton_structure const& skeleton)
 {
     swing_parameters param;
     param.angle_left  = 35.0f * Pi / 180.0f;

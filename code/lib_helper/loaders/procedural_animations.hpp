@@ -48,8 +48,8 @@ struct swing_parameters {
 skeleton_animation_structure build_left_right_swing(skeleton_structure const& skeleton, int pivot, int tip,
                                                     cgp::vec3 const& right_direction, swing_parameters const& param);
 
-// Girafe (teaser of the paper, front view): the neck swings to the left, then to the right.
-skeleton_animation_structure build_girafe_neck_swing(skeleton_structure const& skeleton);
+// Giraffe (teaser of the paper, front view): the neck swings to the left, then to the right.
+skeleton_animation_structure build_giraffe_neck_swing(skeleton_structure const& skeleton);
 
 // Clown (jack-in-the-box, figure of the paper): the body swings on its spring to the left, then to
 // the right, then twists around the spring axis on each side so that the hands oscillate.

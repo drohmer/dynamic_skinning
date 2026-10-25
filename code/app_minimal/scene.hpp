@@ -19,7 +19,7 @@ struct scene_structure : cgp::scene_inputs_generic {
 
 	// ---- Character: skeleton, skinning weights, mesh and animation ----
 	character_structure character;
-	std::string model_name = "Cylinder";  // "Cylinder", "Girafe" or "Clown"
+	std::string model_name = "Cylinder";  // "Cylinder", "Giraffe" or "Clown"
 	std::string mesh_name;                // name of the rigged mesh of the character
 
 	// ---- Parameters of the oscillation kernel κ(t) = A exp(-t/τ) sin(2π f t) ----

@@ -1,4 +1,4 @@
-# Minimal application of dynamic skinning (CPU only): Cylinder, Girafe and Clown
+# Minimal application of dynamic skinning (CPU only): Cylinder, Giraffe and Clown
 #   Build:  cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
 #   Run:    ./build/minimal   (shaders/ and assets/ are found in the root directory)
 cmake_minimum_required(VERSION 3.16)

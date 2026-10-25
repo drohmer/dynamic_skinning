@@ -1,47 +1,47 @@
-# Application minimale — Dynamic Skinning sur CPU
+# Minimal application — Dynamic Skinning on the CPU
 
-Version la plus simple possible du dynamic skinning, sur trois modèles : le cylindre, la girafe et le clown. Il n'y a ni GPU, ni picking des joints, ni délai. On peut seulement tourner la caméra, choisir le modèle et régler les paramètres du noyau d'oscillation et le drag.
+The simplest possible version of dynamic skinning, on three models: the cylinder, the giraffe and the clown. There is no GPU path, no joint picking and no delay. You can only rotate the camera, choose the model, and tune the parameters of the oscillation kernel and the drag.
 
-L'algorithme n'est pas dupliqué : comme l'application complète, elle utilise `dynamic_skinning_source/` (la méthode) et `lib_helper/` (personnage animé, loaders et animations).
+The algorithm is not duplicated: like the complete application, it uses `dynamic_skinning_source/` (the method) and `lib_helper/` (animated character, loaders and animations).
 
-## Compilation et exécution
+## Build and run
 
 ```bash
 cd code/app_minimal
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
-./build/minimal        # les shaders et assets sont trouvés dans code/
+./build/minimal        # the shaders and assets are found in code/
 ```
 
-Elle est aussi compilée par `code/CMakeLists.txt`, avec l'application complète (`code/build/minimal`).
+It is also built by `code/CMakeLists.txt`, together with the complete application (`code/build/minimal`).
 
-## Fichiers
+## Files
 
-- **`scene.cpp/.hpp`** : tout le dynamic skinning de l'application.
-- **`environment.cpp/.hpp`** : caméra et lumière envoyées aux shaders, chemin du projet.
-- **`main.cpp`** : la fenêtre, les callbacks et la boucle d'affichage génériques de cgp.
+- **`scene.cpp/.hpp`**: all the dynamic skinning of the application.
+- **`environment.cpp/.hpp`**: camera and light sent to the shaders, path of the project.
+- **`main.cpp`**: the generic window, callbacks and display loop of cgp.
 
-À chaque frame (`scene_structure::display_frame`), dans l'ordre :
+At each frame (`scene_structure::display_frame`), in order:
 
-1. La pose du squelette au temps de l'animation donne les repères des joints et leurs positions q_j.
-2. Le LBS calcule les positions p_i^LBS.
-3. Le dynamic skinning calcule p_i^DS = p_i^LBS + Σ_j β_ij ψ^bend(F^osc(Ω_j), p_i^LBS − q_j).
-4. Le maillage déformé est affiché.
+1. The pose of the skeleton at the animation time gives the joint frames and their positions q_j.
+2. LBS computes the positions p_i^LBS.
+3. Dynamic skinning computes p_i^DS = p_i^LBS + Σ_j β_ij ψ^bend(F^osc(Ω_j), p_i^LBS − q_j).
+4. The deformed mesh is displayed.
 
-## Paramètres (notations de l'article)
+## Parameters (notations of the paper)
 
-Le noyau d'oscillation est κ(t) = A exp(−t/τ) sin(2π f t), avec :
+The oscillation kernel is κ(t) = A exp(−t/τ) sin(2π f t), with:
 
-| Variable | Rôle | Valeur par défaut |
+| Variable | Role | Default value |
 |---|---|---|
-| `f`   | fréquence de l'oscillation (Hz) | 1.5 |
-| `tau` | amortissement τ (s) | 0.67 |
+| `f`   | oscillation frequency (Hz) | 1.5 |
+| `tau` | damping τ (s) | 0.67 |
 | `A`   | amplitude | 0.88 |
 
-Et le poids du drag (retard proportionnel à la vitesse angulaire, indépendant des oscillations) :
+And the weight of the drag (lag proportional to the angular velocity, independent of the oscillations):
 
-| Variable | Rôle | Valeur par défaut |
+| Variable | Role | Default value |
 |---|---|---|
 | `D`   | drag | 0.5 |
 
-Souris : clic gauche glissé = rotation, clic droit glissé ou molette = zoom, Ctrl + clic gauche = translation.
+Mouse: left drag = rotation, right drag or wheel = zoom, Ctrl + left drag = translation.

@@ -1,103 +1,103 @@
 # Dynamic Skinning
 
-Implémentation de l'article :
+Implementation of the paper:
 
 > **Dynamic Skinning: Kinematics-Driven Cartoon Effects for Articulated Characters**<br>
 > Damien Rohmer, Karim Salem, Niranjan Kalyanasundaram, Victor Zordan<br>
-> *IEEE Transactions on Visualization and Computer Graphics*, 2026. DOI : [10.1109/TVCG.2026.3653317](https://doi.org/10.1109/TVCG.2026.3653317)<br>
-> Version auteur : [`paper/Dynamic_Skinning_TVCG2026_author_version.pdf`](paper/Dynamic_Skinning_TVCG2026_author_version.pdf)
+> *IEEE Transactions on Visualization and Computer Graphics*, 2026. DOI: [10.1109/TVCG.2026.3653317](https://doi.org/10.1109/TVCG.2026.3653317)<br>
+> Author's version: [`paper/Dynamic_Skinning_TVCG2026_author_version.pdf`](paper/Dynamic_Skinning_TVCG2026_author_version.pdf)
 
-Le dynamic skinning ajoute en temps réel des déformations secondaires de style cartoon (retard, oscillations, propagation) à un personnage animé par skinning, à partir de la vitesse angulaire de ses joints.
+Dynamic skinning adds real-time, cartoon-like secondary deformations (lag, oscillations, propagation) to a skinned animated character, driven by the angular velocity of its joints.
 
 <table>
 <tr>
-<td align="center"><img src="docs/images/girafe.jpg" height="200"><br>Girafe</td>
+<td align="center"><img src="docs/images/giraffe.jpg" height="200"><br>Giraffe</td>
 <td align="center"><img src="docs/images/clown.jpg" height="200"><br>Clown</td>
 <td align="center"><img src="docs/images/dragon.jpg" height="200"><br>Dragon</td>
 <td align="center"><img src="docs/images/cthulhu.jpg" height="200"><br>Cthulhu</td>
 </tr>
 <tr>
-<td align="center"><img src="docs/images/cylinder.jpg" height="200"><br>Cylindre</td>
-<td align="center"><img src="docs/images/snail.jpg" height="200"><br>Escargot</td>
-<td align="center" colspan="2"><img src="docs/images/train.jpg" height="200"><br>Train (délai)</td>
+<td align="center"><img src="docs/images/cylinder.jpg" height="200"><br>Cylinder</td>
+<td align="center"><img src="docs/images/snail.jpg" height="200"><br>Snail</td>
+<td align="center" colspan="2"><img src="docs/images/train.jpg" height="200"><br>Train (delay)</td>
 </tr>
 </table>
 
 
-## Contenu
+## Content
 
-- **`code/`** : le code C++, avec deux applications.
-  - **`app_complete/`** : l'application complète (exécutable `complete`) : tous les modèles, skinning CPU ou GPU, manipulation des joints à la souris, délai (dLBS). Elle existe aussi en version web.
-  - **`app_minimal/`** : une application minimale (exécutable `minimal`), en CPU, sur trois modèles. C'est le code le plus simple pour voir comment utiliser la méthode (voir son [README](code/app_minimal/README.md)).
-  - **`dynamic_skinning_source/`** : la méthode elle-même, partagée par les deux applications.
-  - **`lib_helper/`** : personnage animé (squelette, skinning, animations) et chargement des modèles.
-  - **`cgp/`** : la bibliothèque graphique [cgp](https://github.com/drohmer/cgp-2027) ; **`shaders/`**, **`assets/`** : shaders et modèles.
-- **`blender_addon/`** : un prototype d'add-on Blender (voir son [README](blender_addon/README.md)).
-- **`paper/`** : la version auteur de l'article.
-- **`docs/`** : les images de ce README.
+- **`code/`**: the C++ code, with two applications.
+  - **`app_complete/`**: the complete application (executable `complete`): all the models, CPU or GPU skinning, joint manipulation with the mouse, delay (dLBS). It also has a web version.
+  - **`app_minimal/`**: a minimal application (executable `minimal`), on the CPU, with three models. It is the simplest code showing how to use the method (see its [README](code/app_minimal/README.md)).
+  - **`dynamic_skinning_source/`**: the method itself, shared by the two applications.
+  - **`lib_helper/`**: animated character (skeleton, skinning, animations) and loading of the models.
+  - **`cgp/`**: the [cgp](https://github.com/drohmer/cgp-2027) graphics library; **`shaders/`**, **`assets/`**: shaders and models.
+- **`blender_addon/`**: a prototype of Blender add-on (see its [README](blender_addon/README.md)).
+- **`paper/`**: the author's version of the paper.
+- **`docs/`**: the images of this README.
 
 
-## Compilation
+## Build
 
-Dépendances : un compilateur C++17, CMake (3.16 ou plus), OpenGL 3.3 et GLFW.
+Dependencies: a C++17 compiler, CMake (3.16 or later), OpenGL 3.3 and GLFW.
 
-- **macOS :** `brew install cmake glfw`
-- **Linux (Debian, Ubuntu) :** `sudo apt install cmake pkg-config libglfw3-dev`
-- **Windows :** Visual Studio, avec CMake. GLFW est fourni dans `cgp/third_party/`.
+- **macOS:** `brew install cmake glfw`
+- **Linux (Debian, Ubuntu):** `sudo apt install cmake pkg-config libglfw3-dev`
+- **Windows:** Visual Studio, with CMake. GLFW is provided in `cgp/third_party/`.
 
-Depuis le répertoire `code/` :
+From the `code/` directory:
 
 ```bash
 cd code
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
-build/complete    # application complète
-build/minimal     # application minimale
+build/complete    # complete application
+build/minimal     # minimal application
 ```
 
-Avec Visual Studio : `cmake --build build --config Release` ; `complete.exe` est écrit dans `code/` et `minimal.exe` dans `code\build\Release\`.
+With Visual Studio: `cmake --build build --config Release`; `complete.exe` is written in `code/` and `minimal.exe` in `code\build\Release\`.
 
-Les programmes trouvent `shaders/` et `assets/` à partir du répertoire courant : lancez-les depuis `code/`, ou depuis le répertoire de l'application.
+The programs find `shaders/` and `assets/` from the current directory: run them from `code/`, or from the directory of the application.
 
-D'autres façons de compiler, toujours depuis `code/` :
-- **Makefile :** `make` compile les deux applications (`./complete` et `./minimal`), `make complete` une seule.
-- **Une application seule :** `cd app_minimal && cmake -B build && cmake --build build`.
-- **Version web** (application complète, avec [Emscripten](https://emscripten.org)) :
+Other ways to build, also from `code/`:
+- **Makefile:** `make` builds the two applications (`./complete` and `./minimal`), `make complete` only one.
+- **A single application:** `cd app_minimal && cmake -B build && cmake --build build`.
+- **Web version** (complete application, with [Emscripten](https://emscripten.org)):
   ```bash
   emcmake cmake -S . -B build_emscripten -DCMAKE_BUILD_TYPE=Release
   emmake make -C build_emscripten -j
   cd build_emscripten && emrun index.html
   ```
 
-En mode Debug, les vérifications d'indices de cgp sont actives et le skinning CPU est nettement plus lent : utilisez Release pour la performance.
+In Debug mode, the index checks of cgp are active and the CPU skinning is much slower: use Release for performance.
 
 
-## Utilisation de l'application complète
+## Using the complete application
 
-- **Model :** choix du modèle. **Play :** lance l'animation du modèle.
-- **Dynamic skinning :** active ou désactive l'effet. **Delay :** active le délai.
-- **Bone edit / Camera (Tab) :** en mode Bone edit, un clic gauche sur un joint puis un glisser le fait tourner, et un clic droit le fait tourner sur lui-même. En mode Camera, on fait tourner la caméra (clic gauche) et on zoome (clic droit ou molette).
-- **Settings :** réglages avancés (skinning GPU, affichage, timings).
+- **Model:** choice of the model. **Play:** starts the animation of the model.
+- **Dynamic skinning:** enables or disables the effect. **Delay:** enables the delay.
+- **Bone edit / Camera (Tab):** in Bone edit mode, a left click on a joint followed by a drag rotates it, and a right click twists it around its axis. In Camera mode, the camera rotates (left click) and zooms (right click or wheel).
+- **Settings:** advanced settings (GPU skinning, display, timings).
 
-Paramètres, avec les notations de l'article :
-- **f, τ, A :** fréquence, amortissement et amplitude du noyau d'oscillation κ(t) = A exp(−t/τ) sin(2πf t) (section *Modeling Dynamic Oscillation Effects*).
-- **D :** poids du drag, c'est-à-dire le retard proportionnel à la vitesse (annexe *Drag effect*).
-- **c :** vitesse de propagation du délai (section *Time Delay Filter*, *Delayed Linear Blend Skinning*).
-- **Local centers** (Clown) : origines flexibles des déformations (section *Deformation origin control*).
-- **Weights** (Cthulhu) : affiche les poids de bend par sommet, qui limitent la déformation aux parties souples (section *Weighted deformers*).
+Parameters, with the notations of the paper:
+- **f, τ, A:** frequency, damping and amplitude of the oscillation kernel κ(t) = A exp(−t/τ) sin(2πf t) (section *Modeling Dynamic Oscillation Effects*).
+- **D:** weight of the drag, i.e. the lag proportional to the velocity (appendix *Drag effect*).
+- **c:** propagation speed of the delay (section *Time Delay Filter*, *Delayed Linear Blend Skinning*).
+- **Local centers** (Clown): flexible origins of the deformations (section *Deformation origin control*).
+- **Weights** (Cthulhu): displays the per-vertex bend weights, which restrict the deformation to the floppy parts (section *Weighted deformers*).
 
-Pour enregistrer automatiquement des images : `DS_CAPTURE_DIR=captures DS_CAPTURE_MODEL=Girafe DS_CAPTURE_TIMES="1.0,1.5" build/complete`. Les options sont décrites dans [`code/app_complete/capture/frame_capture.hpp`](code/app_complete/capture/frame_capture.hpp).
+To save images automatically: `DS_CAPTURE_DIR=captures DS_CAPTURE_MODEL=Giraffe DS_CAPTURE_TIMES="1.0,1.5" build/complete`. The options are described in [`code/app_complete/capture/frame_capture.hpp`](code/app_complete/capture/frame_capture.hpp).
 
 
-## Add-on Blender
+## Blender add-on
 
-`blender_addon/` contient un prototype d'extension pour Blender (5.0 et plus) qui applique le dynamic skinning (oscillations et drag) à un maillage riggé. Le calcul est fait en Python et numpy, et le décalage de chaque sommet est ajouté par un modificateur Geometry Nodes placé après l'Armature. Le maillage réagit quand on manipule un os en Pose Mode et pendant la lecture de l'animation. Les paramètres f, τ, A, D et γ se règlent dans *Properties > Object > Dynamic Skinning*.
+`blender_addon/` contains a prototype of extension for Blender (5.0 and later) that applies dynamic skinning (oscillations and drag) to a rigged mesh. The computation is done in Python with numpy, and the offset of each vertex is added by a Geometry Nodes modifier placed after the Armature. The mesh reacts when a bone is manipulated in Pose Mode and during the playback of the animation. The parameters f, τ, A, D and γ are set in *Properties > Object > Dynamic Skinning*.
 
 <p align="center"><img src="docs/images/blender_spot.jpg" width="800"></p>
 
-Le fichier d'exemple `blender_addon/examples/spot.blend` contient Spot avec son animation (ci-dessus, la tête tourne et les oreilles suivent avec retard). L'installation et l'utilisation sont décrites dans le [README de l'add-on](blender_addon/README.md).
+The example file `blender_addon/examples/spot.blend` contains Spot with its animation (above, the head turns and the ears follow with a lag). The installation and the use are described in the [README of the add-on](blender_addon/README.md).
 
 
-## Licence
+## License
 
-MIT, voir [`LICENSE.md`](LICENSE.md).
+MIT, see [`LICENSE.md`](LICENSE.md).
