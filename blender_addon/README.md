@@ -4,6 +4,8 @@ Adds dynamic skinning (oscillations and drag) to a rigged mesh in Blender (5.0 a
 
 ## Installation
 
+Download [`dynamic_skinning-0.1.0.zip`](https://github.com/drohmer/dynamic_skinning/releases/download/blender-addon-v0.1.0/dynamic_skinning-0.1.0.zip), or build it from the repository:
+
 ```bash
 blender --command extension build --source-dir blender_addon/dynamic_skinning --output-dir .
 ```

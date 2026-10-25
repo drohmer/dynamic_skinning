@@ -98,11 +98,38 @@ The script [`replicability/teaser.sh`](replicability/teaser.sh) ([`teaser.bat`](
 
 ## Blender add-on
 
-`blender_addon/` contains a prototype of extension for Blender (5.0 and later) that applies dynamic skinning (oscillations and drag) to a rigged mesh. The computation is done in Python with numpy, and the offset of each vertex is added by a Geometry Nodes modifier placed after the Armature. The mesh reacts when a bone is manipulated in Pose Mode and during the playback of the animation. The parameters f, τ, A, D and γ are set in *Properties > Object > Dynamic Skinning*.
+`blender_addon/` contains a prototype of extension for Blender (5.0 and later) that adds dynamic skinning (oscillations and drag) to a rigged mesh. The mesh reacts when a bone is manipulated in Pose Mode and during the playback of the animation.
 
 <p align="center"><img src="docs/images/blender_spot.jpg" width="800"></p>
 
-The example file `blender_addon/examples/spot.blend` contains Spot with its animation (above, the head turns and the ears follow with a lag). The installation and the use are described in the [README of the add-on](blender_addon/README.md).
+### Installation
+
+1. Download [`dynamic_skinning-0.1.0.zip`](https://github.com/drohmer/dynamic_skinning/releases/download/blender-addon-v0.1.0/dynamic_skinning-0.1.0.zip) (see the [releases](https://github.com/drohmer/dynamic_skinning/releases)).
+2. In Blender: *Edit > Preferences > Get Extensions*, then the *▾* menu at the top right, *Install from Disk…*, and select `dynamic_skinning-0.1.0.zip`.
+
+The zip can also be built from the repository: `blender --command extension build --source-dir blender_addon/dynamic_skinning --output-dir .` (on macOS, `blender` is `/Applications/Blender.app/Contents/MacOS/Blender`).
+
+### Try the example
+
+Open `blender_addon/examples/spot.blend` and press *Space* to play the animation: the head of Spot nods and turns, and the ears follow with a lag and oscillate. The armature is in Pose Mode: you can also select a bone and rotate it with *R*.
+
+### Use on your own character
+
+1. Select a mesh deformed by an *Armature* modifier (vertex groups named after the bones).
+2. In *Properties > Object > Dynamic Skinning* (or in the 3D View sidebar, *N > Dyn. Skinning*), click *Enable*.
+3. Switch the armature to Pose Mode and rotate a bone, or play the animation.
+
+The parameters can be changed while the mesh moves:
+
+| Parameter | Effect |
+|---|---|
+| Frequency f (Hz) | speed of the oscillations |
+| Damping τ (s) | how long the oscillations last |
+| Amplitude A | strength of the oscillations after a motion |
+| Drag D | lag during the motion |
+| Bend γ | overall strength of the deformation |
+
+*Reset* recomputes the weights after a change of the rig or of the mesh; *Disable* removes the effect. More details (per-vertex bend weights, how it works, limitations) are given in the [README of the add-on](blender_addon/README.md).
 
 
 ## License
