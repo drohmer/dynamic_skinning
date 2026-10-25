@@ -8,6 +8,9 @@
 #include <thread>
 #include <sstream>
 #include <cstdlib>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 // Custom scene of this code
 #include "scene.hpp"
@@ -42,6 +45,16 @@ int main(int, char* argv[])
 {
 	std::cout << "Run " << argv[0] << std::endl;
 
+#ifdef __EMSCRIPTEN__
+	// The browsers of iOS have no Pointer Lock API: the GLFW of Emscripten calls document.exitPointerLock when
+	// ImGui sets the cursor mode (each frame), which throws an exception and stops the application. The missing
+	// functions are replaced by functions doing nothing.
+	EM_ASM({
+		if (!document.exitPointerLock) document.exitPointerLock = function() {};
+		if (!HTMLCanvasElement.prototype.requestPointerLock) HTMLCanvasElement.prototype.requestPointerLock = function() {};
+	});
+#endif
+
 	
 
 	// ************************ //
@@ -50,6 +63,15 @@ int main(int, char* argv[])
 	
 	// Standard Initialization of an OpenGL ready window
 	scene.window = standard_window_initialization();
+
+#ifdef __EMSCRIPTEN__
+	// Touch screen (phones, tablets): larger GUI, so that the widgets can be used with a finger
+	if (EM_ASM_INT({ return navigator.maxTouchPoints > 0 ? 1 : 0; })) {
+		project::gui_scale = 1.6f;
+		ImGui::GetStyle().ScaleAllSizes(project::gui_scale);
+		ImGui::GetIO().ConfigWindowsMoveFromTitleBarOnly = true;  // no accidental move of the windows
+	}
+#endif
 
 	// Initialize default path for assets
 	project::path = cgp::project_path_find(argv[0], "shaders/");
@@ -295,8 +317,11 @@ void window_size_callback(GLFWwindow*, int width, int height)
 }
 
 // This function is called everytime the mouse is moved
-void mouse_move_callback(GLFWwindow* /*window*/, double xpos, double ypos)
+void mouse_move_callback(GLFWwindow* window, double xpos, double ypos)
 {
+	// ImGui receives the position before the clicks (with a touch screen, the finger moves the cursor just before the click)
+	ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
+
 	vec2 const pos_relative = scene.window.convert_pixel_to_relative_coordinates({ xpos, ypos });
 	scene.inputs.mouse.position.update(pos_relative);
 	scene.mouse_move_event();
@@ -305,6 +330,15 @@ void mouse_move_callback(GLFWwindow* /*window*/, double xpos, double ypos)
 // This function is called everytime a mouse button is clicked/released
 void mouse_click_callback(GLFWwindow* window, int button, int action, int mods)
 {
+#ifdef __EMSCRIPTEN__
+	// With a touch screen, the press of the finger arrives before its position (sent only when the finger moves):
+	// the position is sent first, otherwise ImGui and the scene would apply the press at the previous position
+	if (action == GLFW_PRESS) {
+		double xpos = 0, ypos = 0;
+		glfwGetCursorPos(window, &xpos, &ypos);
+		mouse_move_callback(window, xpos, ypos);
+	}
+#endif
 	ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
 	
 	scene.inputs.mouse.click.update_from_glfw_click(button, action);
