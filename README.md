@@ -7,9 +7,12 @@ Implementation of the paper:
 > **Dynamic Skinning: Kinematics-Driven Cartoon Effects for Articulated Characters**<br>
 > Damien Rohmer, Karim Salem, Niranjan Kalyanasundaram, Victor Zordan<br>
 > *IEEE Transactions on Visualization and Computer Graphics*, 2026. DOI: [10.1109/TVCG.2026.3653317](https://doi.org/10.1109/TVCG.2026.3653317)<br>
-> Author's version: [`paper/Dynamic_Skinning_TVCG2026_author_version.pdf`](paper/Dynamic_Skinning_TVCG2026_author_version.pdf)
+> Author's version: [`paper/Dynamic_Skinning_TVCG2026_author_version.pdf`](paper/Dynamic_Skinning_TVCG2026_author_version.pdf)<br>
+> Project page: [velocityskinning.com](https://velocityskinning.com/)
 
 Dynamic skinning adds real-time, cartoon-like secondary deformations (lag, oscillations, propagation) to a skinned animated character, driven by the angular velocity of its joints.
+
+**Interactive demo** (web version of the complete application, in the browser): [velocityskinning.com/demo](https://velocityskinning.com/demo/)
 
 <table>
 <tr>
