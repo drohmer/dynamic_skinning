@@ -66,14 +66,22 @@ class RigState:
         self.vertex_weights /= np.where(total > 0, total, 1.0)
         self.has_weight = total[:, 0] > 0
 
-        # Rest positions p_i^0 (mesh coordinates, homogeneous)
-        p0 = np.zeros(3 * N)
+        # Rest positions p_i^0 (mesh coordinates)
+        p0 = np.zeros(3 * N, dtype=np.float32)
         mesh.vertices.foreach_get("co", p0)
-        self.p0 = np.hstack([p0.reshape(N, 3), np.ones((N, 1))])
+        self.p0 = p0.reshape(N, 3)
+
+        # Per joint: the vertices it influences, their weights α_ij and rest positions (for the LBS, see update)
+        self.joint_vertices = []
+        for j in range(len(bones)):
+            rows, columns = np.nonzero(self.vertex_joints == j)
+            self.joint_vertices.append((core.as_slice(rows), self.vertex_weights[rows, columns].astype(np.float32)[:, None],
+                                        self.p0[rows]))
 
         # Half size of the model (world coordinates): the bend is computed on the model scaled to [-1, 1]
-        p_world = self.p0 @ np.array(obj.matrix_world).T
-        size = 0.5 * np.max(p_world[:, :3].max(axis=0) - p_world[:, :3].min(axis=0))
+        W_mesh = np.array(obj.matrix_world)
+        p_world = self.p0 @ W_mesh[:3, :3].T + W_mesh[:3, 3]
+        size = 0.5 * np.max(p_world.max(axis=0) - p_world.min(axis=0))
         self.ds = core.DynamicSkinning(parent, self.vertex_joints, self.vertex_weights, bend_weight, max(size, 1e-6))
         self.last_written_zero = False
 
@@ -111,22 +119,25 @@ class RigState:
         # Nothing to deform: write zeros once, then leave the mesh untouched
         if np.all(np.linalg.norm(F, axis=1) < core.ACTIVE_THRESHOLD):
             if not self.last_written_zero:
-                write_offset(obj, np.zeros((len(self.p0), 3)))
+                write_offset(obj, np.zeros_like(self.p0))
                 self.last_written_zero = True
             return True
 
-        # LBS positions (world): p_i = Σ_j α_ij W_armature M_j B_j^-1 W_armature^-1 W_mesh p_i^0
+        # LBS positions (world): p_i = Σ_j α_ij S_j p_i^0  with  S_j = W_armature M_j B_j^-1 W_armature^-1 W_mesh
+        # Computed per joint, on the vertices it influences: one (n x 3) (3 x 3) product per joint
         to_armature = np.array(W_armature.inverted() @ obj.matrix_world)
-        skinning = np.array([np.array(g) for g in G]) @ self.inverse_rest @ to_armature   # (J, 4, 4)
-        p_lbs = np.zeros((len(self.p0), 4))
-        for k in range(self.vertex_joints.shape[1]):
-            S = skinning[np.maximum(self.vertex_joints[:, k], 0)]
-            p_lbs += self.vertex_weights[:, k, None] * np.einsum('nab,nb->na', S, self.p0)
-        p_lbs = np.where(self.has_weight[:, None], p_lbs, self.p0 @ np.array(obj.matrix_world).T)[:, :3]
+        skinning = (np.array([np.array(g) for g in G]) @ self.inverse_rest @ to_armature).astype(np.float32)
+        p_lbs = np.zeros_like(self.p0)
+        if not self.has_weight.all():   # vertices without weight: not deformed by the Armature modifier
+            W_mesh = np.array(obj.matrix_world, dtype=np.float32)
+            p_lbs[~self.has_weight] = self.p0[~self.has_weight] @ W_mesh[:3, :3].T + W_mesh[:3, 3]
+        for S, (idx, alpha, p0) in zip(skinning, self.joint_vertices):
+            if len(alpha):
+                p_lbs[idx] += alpha * (p0 @ S[:3, :3].T + S[:3, 3])
 
         offset_world = self.ds.deformation(params, F, joint_position, p_lbs)
         to_mesh = np.array(obj.matrix_world.inverted().to_3x3())
-        write_offset(obj, offset_world @ to_mesh.T)
+        write_offset(obj, offset_world @ to_mesh.T.astype(np.float32))
         self.last_written_zero = False
         return True
 
@@ -136,7 +147,7 @@ def write_offset(obj, offset):
     attribute = mesh.attributes.get(ATTRIBUTE)
     if attribute is None:
         attribute = mesh.attributes.new(ATTRIBUTE, 'FLOAT_VECTOR', 'POINT')
-    attribute.data.foreach_set("vector", offset.astype(np.float32).ravel())
+    attribute.data.foreach_set("vector", offset.astype(np.float32, copy=False).ravel())
     mesh.update_tag()
 
 

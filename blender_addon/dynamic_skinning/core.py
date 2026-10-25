@@ -45,6 +45,13 @@ def oscillating_kernel(params):
     return params.A * np.exp(-t / max(params.tau, 1e-3)) * np.sin(2 * math.pi * params.f * t)
 
 
+def as_slice(idx):
+    """Vertex indices as a slice when they are contiguous (faster than an index array), else unchanged."""
+    if len(idx) and idx[-1] - idx[0] + 1 == len(idx):
+        return slice(int(idx[0]), int(idx[-1]) + 1)
+    return idx
+
+
 def hierarchical_weights(parent, vertex_joints, vertex_weights):
     """β_ij = Σ of the skinning weights α_ik of the joints k in the subtree of j.
 
@@ -68,7 +75,7 @@ def hierarchical_weights(parent, vertex_joints, vertex_weights):
     result = []
     for j in range(J):
         idx = np.nonzero(beta[:, j] > 1e-6)[0]
-        result.append((idx, beta[idx, j]))
+        result.append((as_slice(idx), beta[idx, j].astype(np.float32)[:, None]))
     return result
 
 
@@ -84,7 +91,7 @@ class DynamicSkinning:
         """
         self.parent = np.asarray(parent)
         self.beta = hierarchical_weights(self.parent, vertex_joints, vertex_weights)
-        self.bend_weight = np.asarray(bend_weight, dtype=np.float64)
+        self.bend_weight = np.asarray(bend_weight, dtype=np.float32)
         self.reference_length = reference_length
         self.reset()
 
@@ -141,23 +148,25 @@ class DynamicSkinning:
         return np.einsum('jab,jb->ja', parent_rotation, F_local)
 
     def deformation(self, params, F, joint_position, p_lbs):
-        """Offset Σ_j β_ij ψ^bend(F_j, p_i - q_j) of the vertices, (N, 3).
+        """Offset Σ_j β_ij ψ^bend(F_j, p_i - q_j) of the vertices, (N, 3) float32.
 
         F: (J, 3) filtered angular velocity (world);  joint_position: (J, 3) q_j;  p_lbs: (N, 3) LBS positions
         """
-        offset = np.zeros_like(p_lbs)
+        offset = np.zeros(p_lbs.shape, dtype=np.float32)
         F_norm = np.linalg.norm(F, axis=1)
         gamma = BEND_COUPLING * params.bend * self.bend_weight
         for j in np.nonzero(F_norm >= ACTIVE_THRESHOLD)[0]:
             idx, beta = self.beta[j]
-            if len(idx) == 0:
+            if len(beta) == 0:
                 continue
-            w = F[j] / F_norm[j]                         # axis ω of the rotation
-            u = p_lbs[idx] - joint_position[j]
-            v = u - (u @ w)[:, None] * w                 # component of u orthogonal to ω
+            w = (F[j] / F_norm[j]).astype(np.float32)        # axis ω of the rotation
+            u = p_lbs[idx] - joint_position[j].astype(np.float32)
+            v = u - (u @ w)[:, None] * w                     # component of u orthogonal to ω
+            # Since v ⊥ ω:  ω × u = ω × v  and  ‖ω × u‖ = ‖v‖;  ω × v = K v with K the cross product matrix of ω
+            K = np.array([[0, -w[2], w[1]], [w[2], 0, -w[0]], [-w[1], w[0], 0]], dtype=np.float32)
+            w_cross_v = v @ K.T
             # θ = -γ ‖Ω × u‖, with u measured on the model scaled to [-1, 1]
-            theta = -gamma[idx] * F_norm[j] * np.linalg.norm(np.cross(w, u), axis=1) / self.reference_length
+            theta = float(-F_norm[j] / self.reference_length) * gamma[idx] * np.sqrt(np.einsum('ij,ij->i', v, v))
             # (R - I) v with Rodrigues' formula (v ⊥ ω):  sin θ (ω × v) + (cos θ - 1) v
-            bend = np.sin(theta)[:, None] * np.cross(w, v) + (np.cos(theta) - 1)[:, None] * v
-            offset[idx] += beta[:, None] * bend
+            offset[idx] += beta * (np.sin(theta)[:, None] * w_cross_v + (np.cos(theta) - 1)[:, None] * v)
         return offset

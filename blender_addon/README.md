@@ -39,7 +39,7 @@ Paramètres (notations de l'article) : fréquence **f** (Hz), amortissement **τ
 
 L'angle du bend est calculé sur le modèle ramené dans [−1, 1] (demi-taille du maillage au repos) : le résultat ne dépend pas de l'échelle du modèle dans Blender, et les valeurs des paramètres sont celles des applications.
 
-Coût d'une mise à jour (Python et numpy, Mac de développement, cylindre à 2 os, sans la réévaluation du modificateur par Blender) : 0.5 ms pour 1 440 sommets, 4 ms pour 25 600, 15 ms pour 102 400.
+Coût d'une mise à jour (Python et numpy en float32, Mac de développement, sans la réévaluation du modificateur par Blender, d'environ 4 ms pour 100k sommets) : cylindre à 2 os, 0.2 ms pour 1 440 sommets, 1.1 ms pour 25 600, 3.9 ms pour 102 400 ; Spot (26 os), 0.6 ms pour 2 930 sommets, 6.6 ms pour 70 274 (subdivisé). Le LBS est calculé os par os (un produit matriciel par os sur les sommets qu'il influence), et le bend utilise ‖ω × u‖ = ‖v‖ et le produit vectoriel sous forme matricielle.
 
 ## Limites du prototype
 
