@@ -31,6 +31,8 @@ build/minimal     # application minimale
 
 Le `CMakeLists.txt` racine compile les deux applications ; chacune peut aussi être compilée seule depuis son répertoire (`cd app_minimal && cmake -B build && cmake --build build`).
 
+Avec le `Makefile` : `make` compile les deux applications (`./complete` et `./minimal` à la racine), `make complete` ou `make minimal` une seule ; le code commun (`dynamic_skinning_source/`, `lib_helper/`, `cgp/`) n'est compilé qu'une fois.
+
 Dépendances : GLFW (système), OpenGL 3.3+. Le framework cgp est inclus dans le répertoire `cgp/` (version de [cgp-2027](https://github.com/drohmer/cgp-2027), commit 34b0efa). Hors build Debug, les assertions de cgp sont désactivées (`CGP_NO_DEBUG`) : les vérifications d'indices sur les opérations `vec3` ralentissent fortement le skinning CPU.
 
 ### Captures d'écran automatiques
