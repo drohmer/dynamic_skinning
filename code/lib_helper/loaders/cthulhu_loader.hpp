@@ -9,7 +9,11 @@
 // "default" uses the root binary/ and rig/ directories (~250K vertices)
 // "300000", "500000", "1500000" use the corresponding subdirectories
 inline const char* cthulhu_resolutions[] = {"default", "300000", "500000", "1500000"};
+#ifdef __EMSCRIPTEN__
+inline constexpr int cthulhu_resolution_count = 1;  // web version: only the default mesh is packaged
+#else
 inline constexpr int cthulhu_resolution_count = 4;
+#endif
 
 // Load cthulhu character from binary asset format
 // base_dir should end with '/', e.g. project::path + "assets/cthulhu/"

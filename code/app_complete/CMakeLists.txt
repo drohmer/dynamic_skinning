@@ -123,6 +123,10 @@ if(EMSCRIPTEN)
     if(ASSETS_FILES)
         target_link_options(${PROJECT_NAME} PRIVATE
             "SHELL:--preload-file ${ROOT}/assets/@assets/"  # SHELL: avoids the de-duplication of --preload-file
+            # High resolution Cthulhu meshes (~100 MB) are not packaged in the web version
+            "SHELL:--exclude-file ${ROOT}/assets/cthulhu/300000"
+            "SHELL:--exclude-file ${ROOT}/assets/cthulhu/500000"
+            "SHELL:--exclude-file ${ROOT}/assets/cthulhu/1500000"
         )
     endif()
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

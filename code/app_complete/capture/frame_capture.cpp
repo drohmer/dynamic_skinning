@@ -3,8 +3,14 @@
 #include <cstdlib>
 #include <sstream>
 #include <iomanip>
+#include <cmath>
 
 using namespace cgp;
+
+
+// Virtual clock of the video mode, advanced of 1/fps after each saved frame
+static double virtual_time = 0.0;
+static double virtual_time_source() { return virtual_time; }
 
 
 void frame_capture_structure::initialize_from_environment()
@@ -44,6 +50,18 @@ void frame_capture_structure::initialize_from_environment()
     if (gui_env != nullptr)
         gui = std::atoi(gui_env);
 
+    char const* amplitude_env = std::getenv("DS_CAPTURE_AMPLITUDE");
+    if (amplitude_env != nullptr)
+        amplitude = float(std::atof(amplitude_env));
+
+    char const* drag_env = std::getenv("DS_CAPTURE_DRAG");
+    if (drag_env != nullptr)
+        drag = float(std::atof(drag_env));
+
+    char const* zoom_env = std::getenv("DS_CAPTURE_ZOOM");
+    if (zoom_env != nullptr)
+        zoom = float(std::atof(zoom_env));
+
     char const* eye_env = std::getenv("DS_CAPTURE_EYE");
     if (eye_env != nullptr) {
         std::stringstream se(eye_env);
@@ -53,6 +71,20 @@ void frame_capture_structure::initialize_from_environment()
     }
 
     times.clear();
+    char const* video_env = std::getenv("DS_CAPTURE_VIDEO");
+    if (video_env != nullptr) {
+        float duration = 0;
+        char comma;
+        std::stringstream sv(video_env);
+        sv >> video_fps >> comma >> duration;
+        int const frame_count = int(std::round(video_fps * duration));
+        for (int k = 0; k < frame_count; ++k)
+            times.push_back(float(k) / video_fps);
+        timer_set_time_source(virtual_time_source);
+        std::cout << "Capture mode: video " << video_fps << " fps, " << frame_count << " frame(s) -> " << directory << std::endl;
+        return;
+    }
+
     char const* times_env = std::getenv("DS_CAPTURE_TIMES");
     std::stringstream ss(times_env != nullptr ? times_env : "0");
     std::string item;
@@ -72,7 +104,7 @@ bool frame_capture_structure::finished() const
 
 void frame_capture_structure::update(float animation_time, std::string const& model_name)
 {
-    if (!active || finished() || animation_time < times[next])
+    if (!active || finished() || (video_fps <= 0 && animation_time < times[next]))
         return;
 
     // Read the current framebuffer (viewport size handles high-DPI screens)
@@ -90,10 +122,15 @@ void frame_capture_structure::update(float animation_time, std::string const& mo
     glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, im.data.data.data());
 
     std::stringstream filename;
-    filename << directory << model_name << "_" << std::setw(2) << std::setfill('0') << next
-             << "_t" << std::fixed << std::setprecision(2) << animation_time << ".png";
+    if (video_fps > 0)
+        filename << directory << model_name << "_" << std::setw(4) << std::setfill('0') << next << ".png";
+    else
+        filename << directory << model_name << "_" << std::setw(2) << std::setfill('0') << next
+                 << "_t" << std::fixed << std::setprecision(2) << animation_time << ".png";
     image_save_png(filename.str(), im.mirror_vertical());
     std::cout << "Saved " << filename.str() << std::endl;
 
     ++next;
+    if (video_fps > 0)
+        virtual_time += 1.0 / video_fps;
 }

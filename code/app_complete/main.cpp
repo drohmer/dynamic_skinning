@@ -6,6 +6,8 @@
 
 #include <chrono>
 #include <thread>
+#include <sstream>
+#include <cstdlib>
 
 // Custom scene of this code
 #include "scene.hpp"
@@ -69,6 +71,12 @@ int main(int, char* argv[])
 			auto& cam = scene.camera_control.camera_model;
 			cam.look_at(capture.eye, cam.center_of_rotation, cam.orientation() * vec3{0, 1, 0});  // keeps the up vector of the preset
 		}
+		if (capture.amplitude >= 0)
+			scene.ds_params.amplitude = capture.amplitude;
+		if (capture.drag >= 0)
+			scene.ds_params.drag = capture.drag;
+		if (capture.zoom != 1.0f)
+			scene.camera_control.camera_model.distance_to_center *= capture.zoom;
 		if (capture.gpu >= 0)
 			scene.use_gpu_skinning = (capture.gpu == 1);
 		if (capture.dynamic_skinning >= 0)
@@ -86,6 +94,7 @@ int main(int, char* argv[])
 			project::fps_max = capture.fps;
 		}
 		scene.character.timer.start();
+		scene.ds_timer.start();  // both timers restart on the clock of the capture (virtual clock in video mode)
 		scene.animation_running = true;
 		scene.show_settings = (capture.gui == 2);
 	}
@@ -145,10 +154,13 @@ void animation_loop()
 	glEnable(GL_DEPTH_TEST);
 
 	float const time_interval = fps_record.update();
+#ifndef __EMSCRIPTEN__
+	// Frame rate in the window title (not in the web version, where it would replace the title of the page)
 	if (fps_record.event) {
 		std::string const title = "CGP Display - " + str(fps_record.fps) + " fps";
 		glfwSetWindowTitle(scene.window.glfw_window, title.c_str());
 	}
+#endif
 
 	imgui_create_frame();
 	ImGui::GetIO().FontGlobalScale = project::gui_scale;
@@ -234,6 +246,13 @@ window_structure standard_window_initialization()
 		window_width = project::initial_window_size_width * scene.window.monitor_width();
 	if(project::initial_window_size_height<1)
 		window_height = project::initial_window_size_height * scene.window.monitor_height();
+
+	// Window size imposed by the capture mode (DS_CAPTURE_SIZE="width,height")
+	if (char const* size_env = std::getenv("DS_CAPTURE_SIZE")) {
+		char comma;
+		std::stringstream ss(size_env);
+		ss >> window_width >> comma >> window_height;
+	}
 
 	// Create the window using GLFW
 	window_structure window;

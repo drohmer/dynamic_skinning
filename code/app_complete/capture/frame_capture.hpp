@@ -18,6 +18,13 @@
 //   DS_CAPTURE_EYE    "x,y,z" camera position, looking at the preset center with its up vector (default: model preset)
 //   DS_CAPTURE_GUI    1 to include the GUI in the frames, 2 to also open the settings window (default: 0)
 //   DS_CAPTURE_SKELETON 0/1 to hide/show the skeleton (default: unchanged)
+//   DS_CAPTURE_VIDEO  "fps,duration" video mode, e.g. "30,6": every frame is saved as <dir>/<model>_<k>.png,
+//                     and the timers follow a virtual clock advancing of exactly 1/fps per frame
+//                     (deterministic result, independent of the rendering speed). DS_CAPTURE_TIMES is ignored.
+//   DS_CAPTURE_SIZE   "width,height" initial window size, in screen points (default: application default)
+//   DS_CAPTURE_AMPLITUDE  amplitude A of the oscillations, e.g. 0 for the drag alone (default: model default)
+//   DS_CAPTURE_DRAG   drag weight D (default: model default)
+//   DS_CAPTURE_ZOOM   factor applied to the distance of the camera to its center, e.g. 1.5 to zoom out (default: 1)
 // The animation is started, frames are saved as <dir>/<model>_<k>_t<time>.png (without GUI by default),
 // and the application quits after the last frame.
 struct frame_capture_structure {
@@ -33,6 +40,10 @@ struct frame_capture_structure {
     bool has_eye = false;
     cgp::vec3 eye;
     int gui = 0;                 // 0: no GUI, 1: with GUI, 2: with GUI and settings window
+    float video_fps = 0;         // >0: video mode (every frame saved, virtual clock)
+    float zoom = 1.0f;           // factor on the distance of the camera to its center
+    float amplitude = -1;        // <0: unchanged
+    float drag = -1;             // <0: unchanged
     int next = 0;
 
     // Read the environment variables
