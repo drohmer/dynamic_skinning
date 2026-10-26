@@ -205,12 +205,14 @@ void animation_loop()
 #endif
 	emscripten_update_window_size(scene.window.width, scene.window.height); // update window size in case of use of emscripten (not used by default)
 
-	// Portrait window (phone, tablet): the vertical field of view is widened, so that the horizontal one stays
-	// the one of a square window and the character is not cut on the sides
+	// Narrow window (portrait phone or tablet): the camera presets of the models are set for a landscape window
+	// (aspect ratio about 1.5). The vertical field of view is widened, so that the horizontal one stays the one
+	// of that window and the character is not cut on the sides.
 	static float const field_of_view_reference = scene.camera_projection.field_of_view;
+	float const aspect_ratio_reference = 1.5f;
 	float const aspect_ratio = scene.window.aspect_ratio();
-	scene.camera_projection.field_of_view = aspect_ratio >= 1.0f ? field_of_view_reference :
-		2.0f * std::atan(std::tan(field_of_view_reference / 2.0f) / aspect_ratio);
+	scene.camera_projection.field_of_view = aspect_ratio >= aspect_ratio_reference ? field_of_view_reference :
+		2.0f * std::atan(std::tan(field_of_view_reference / 2.0f) * aspect_ratio_reference / aspect_ratio);
 	scene.camera_projection.aspect_ratio = aspect_ratio;
 	scene.environment.camera_projection = scene.camera_projection.matrix();
 	glViewport(0, 0, scene.window.width, scene.window.height);
