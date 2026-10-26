@@ -1,13 +1,15 @@
 schema_version = "1.0.0"
 
 id = "dynamic_skinning"
-version = "0.1.0"
+version = "0.1.1"
 name = "Dynamic Skinning"
 tagline = "Secondary oscillations driven by the velocity of the bones"
 maintainer = "Damien Rohmer <damien.rohmer@polytechnique.edu>"
 type = "add-on"
+website = "https://github.com/drohmer/dynamic_skinning/tree/main/blender_addon"
 
-blender_version_min = "5.0.0"
+blender_version_min = "4.4.0"
 
-license = ["SPDX:MIT"]
+license = ["SPDX:GPL-3.0-or-later"]
+copyright = ["2022-2026 Damien Rohmer"]
 tags = ["Animation", "Rigging"]

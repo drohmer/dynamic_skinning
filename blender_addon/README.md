@@ -1,16 +1,16 @@
 # Blender add-on — Dynamic Skinning (prototype)
 
-Adds dynamic skinning (oscillations and drag) to a rigged mesh in Blender (5.0 and later, tested with 5.2). The mesh oscillates when its bones move: when a bone is manipulated in Pose Mode, and during the playback of the animation. This is the simple version of the method, without delay (dLBS) or flexible origins.
+Adds dynamic skinning (oscillations and drag) to a rigged mesh in Blender (4.4 and later, tested with 4.4 and 5.2). The mesh oscillates when its bones move: when a bone is manipulated in Pose Mode, and during the playback of the animation. This is the simple version of the method, without delay (dLBS) or flexible origins.
 
 ## Installation
 
-Download [`dynamic_skinning-0.1.0.zip`](https://github.com/drohmer/dynamic_skinning/releases/download/blender-addon-v0.1.0/dynamic_skinning-0.1.0.zip), or build it from the repository:
+Download [`dynamic_skinning-0.1.1.zip`](https://github.com/drohmer/dynamic_skinning/releases/download/blender-addon-v0.1.1/dynamic_skinning-0.1.1.zip), or build it from the repository:
 
 ```bash
 blender --command extension build --source-dir blender_addon/dynamic_skinning --output-dir .
 ```
 
-Then, in Blender: *Edit > Preferences > Get Extensions > ▾ > Install from Disk…* and choose `dynamic_skinning-0.1.0.zip`.
+Then, in Blender: *Edit > Preferences > Get Extensions > ▾ > Install from Disk…* and choose `dynamic_skinning-0.1.1.zip`.
 
 ## Example files
 
@@ -60,3 +60,7 @@ Cost of an update (Python and numpy in float32, on the development Mac, without 
 ```bash
 blender -b --factory-startup --python blender_addon/tests/test_cylinder.py -- <directory>
 ```
+
+## License
+
+The extension (`dynamic_skinning/`) is distributed under the GNU GPL v3 or later (see [`dynamic_skinning/LICENSE`](dynamic_skinning/LICENSE)), as required by the Blender Extensions Platform. The rest of the repository is under the MIT license.

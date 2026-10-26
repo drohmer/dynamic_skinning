@@ -101,14 +101,14 @@ The script [`replicability/teaser.sh`](replicability/teaser.sh) ([`teaser.bat`](
 
 ## Blender add-on
 
-`blender_addon/` contains a prototype of extension for Blender (5.0 and later) that adds dynamic skinning (oscillations and drag) to a rigged mesh. The mesh reacts when a bone is manipulated in Pose Mode and during the playback of the animation.
+`blender_addon/` contains a prototype of extension for Blender (4.4 and later) that adds dynamic skinning (oscillations and drag) to a rigged mesh. The mesh reacts when a bone is manipulated in Pose Mode and during the playback of the animation.
 
 <p align="center"><img src="docs/images/blender_spot.jpg" width="800"></p>
 
 ### Installation
 
-1. Download [`dynamic_skinning-0.1.0.zip`](https://github.com/drohmer/dynamic_skinning/releases/download/blender-addon-v0.1.0/dynamic_skinning-0.1.0.zip) (see the [releases](https://github.com/drohmer/dynamic_skinning/releases)).
-2. In Blender: *Edit > Preferences > Get Extensions*, then the *▾* menu at the top right, *Install from Disk…*, and select `dynamic_skinning-0.1.0.zip`.
+1. Download [`dynamic_skinning-0.1.1.zip`](https://github.com/drohmer/dynamic_skinning/releases/download/blender-addon-v0.1.1/dynamic_skinning-0.1.1.zip) (see the [releases](https://github.com/drohmer/dynamic_skinning/releases)).
+2. In Blender: *Edit > Preferences > Get Extensions*, then the *▾* menu at the top right, *Install from Disk…*, and select `dynamic_skinning-0.1.1.zip`.
 
 The zip can also be built from the repository: `blender --command extension build --source-dir blender_addon/dynamic_skinning --output-dir .` (on macOS, `blender` is `/Applications/Blender.app/Contents/MacOS/Blender`).
 
@@ -137,4 +137,4 @@ The parameters can be changed while the mesh moves:
 
 ## License
 
-MIT, see [`LICENSE.md`](LICENSE.md).
+MIT, see [`LICENSE.md`](LICENSE.md), except the Blender add-on (`blender_addon/dynamic_skinning/`), which is distributed under the GNU GPL v3 or later, as required by the Blender Extensions Platform: see [`blender_addon/dynamic_skinning/LICENSE`](blender_addon/dynamic_skinning/LICENSE).
