@@ -120,16 +120,36 @@ if(EMSCRIPTEN)
         -sEXPORTED_RUNTIME_METHODS=ccall  # functions of web_interface.cpp, called by the HTML panel
         "SHELL:--preload-file ${ROOT}/shaders/@shaders/"
     )
-    file(GLOB ASSETS_FILES "${ROOT}/assets/*")
-    if(ASSETS_FILES)
+    # Models: complete.data only holds the shaders and the default model (Giraffe, 0.4 MB), so that the demo
+    # starts quickly. Each other model is a separate package (model_<name>.js + model_<name>.data), downloaded
+    # by the web page when the model is chosen, or in the background (see web_page_models in the page template).
+    if(EXISTS "${ROOT}/assets/giraffe")
         target_link_options(${PROJECT_NAME} PRIVATE
-            "SHELL:--preload-file ${ROOT}/assets/@assets/"  # SHELL: avoids the de-duplication of --preload-file
-            # High resolution Cthulhu meshes (~100 MB) are not packaged in the web version
-            "SHELL:--exclude-file ${ROOT}/assets/cthulhu/300000"
-            "SHELL:--exclude-file ${ROOT}/assets/cthulhu/500000"
-            "SHELL:--exclude-file ${ROOT}/assets/cthulhu/1500000"
+            "SHELL:--preload-file ${ROOT}/assets/giraffe@assets/giraffe"  # SHELL: avoids the de-duplication of --preload-file
         )
     endif()
+    set(MODEL_PACKAGES clown cthulhu dragon snail spot train)
+    set(MODEL_PACKAGE_OUTPUTS "")
+    foreach(model ${MODEL_PACKAGES})
+        if(NOT EXISTS "${ROOT}/assets/${model}")
+            continue()
+        endif()
+        file(GLOB_RECURSE MODEL_FILES "${ROOT}/assets/${model}/*")
+        # High resolution Cthulhu meshes (~100 MB) are not packaged in the web version
+        list(FILTER MODEL_FILES EXCLUDE REGEX "/cthulhu/(300000|500000|1500000)/")
+        add_custom_command(
+            OUTPUT "${CMAKE_BINARY_DIR}/model_${model}.data" "${CMAKE_BINARY_DIR}/model_${model}.js"
+            COMMAND "${EMSCRIPTEN_ROOT_PATH}/tools/file_packager" "model_${model}.data"
+                --preload "${ROOT}/assets/${model}@assets/${model}"
+                --exclude "${ROOT}/assets/cthulhu/300000" "${ROOT}/assets/cthulhu/500000" "${ROOT}/assets/cthulhu/1500000"
+                --js-output=model_${model}.js --no-node
+            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+            DEPENDS ${MODEL_FILES}
+            COMMENT "Web package of the model ${model}"
+        )
+        list(APPEND MODEL_PACKAGE_OUTPUTS "${CMAKE_BINARY_DIR}/model_${model}.data")
+    endforeach()
+    add_custom_target(model_packages ALL DEPENDS ${MODEL_PACKAGE_OUTPUTS})
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
             "${ROOT}/scripts/emscripten/emscripten_template.html"

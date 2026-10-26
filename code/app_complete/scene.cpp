@@ -3,6 +3,9 @@
 #include "loaders/procedural_animations.hpp"
 #include <chrono>
 #include <iomanip>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 using namespace cgp;
 
@@ -56,6 +59,12 @@ static void compute_weight_colors(
 
 void scene_structure::load_model(std::string const& name)
 {
+#ifdef __EMSCRIPTEN__
+	// Web version: the models other than the default one are downloaded on demand (one package per model).
+	// If the files of the model are not there yet, the page downloads them and calls load_model again.
+	if (!EM_ASM_INT({ return Module.webRequestModel ? Module.webRequestModel(UTF8ToString($0)) : 1; }, name.c_str()))
+		return;
+#endif
 	current_model_name = name;
 
 	if (name == "Cylinder") {

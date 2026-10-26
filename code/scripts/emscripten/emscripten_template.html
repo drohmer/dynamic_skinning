@@ -23,6 +23,14 @@
                 touch-action: none; /* touch gestures go to the application (no page scroll / zoom) */
             }
 
+            /* Model being downloaded (other than the default one) */
+            #model-loading {
+              position: fixed; top: calc(var(--bar) + 12px); left: calc(50% - var(--panel-w, 0px) / 2); transform: translateX(-50%); z-index: 8;
+              padding: 8px 16px; border-radius: 999px; background: rgba(20, 18, 28, .9); color: var(--ink); font-size: 14px;
+              font-variant-numeric: tabular-nums; box-shadow: 0 10px 30px rgba(0, 0, 0, .3); pointer-events: none;
+            }
+            #model-loading[hidden] { display: none; }
+
             /* ---- Touch panel: replaces the ImGui toolbar on touch screens (controls sized for the fingers) ----
                Three levels (data-level): 1 = model, play, reset, compare; 2 = + options and parameters f, tau, A, D;
                3 = level 1 + all the ImGui windows. Portrait: bar at the bottom, the canvas ends above it.
@@ -89,6 +97,8 @@
     <body>
 
         <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+
+        <div id="model-loading" hidden aria-live="polite"></div>
 
         <aside id="panel" hidden aria-label="Demo controls">
           <button class="grip" type="button" id="p-grip" aria-expanded="false">Parameters</button>
@@ -201,7 +211,7 @@
 
           // Synchronization with the state of the application
           function sync() {
-            if (document.activeElement !== model) model.value = Module.ccall('web_current_model', 'string', [], []);
+            if (document.activeElement !== model) model.value = requestedModel || Module.ccall('web_current_model', 'string', [], []);
             document.getElementById('p-play').textContent = num('web_is_playing') ? 'Pause' : 'Play';
             const ds = !!num('web_dynamic_skinning'), delay = !!num('web_delay');
             if (!comparing) document.getElementById('p-ds').checked = ds;
@@ -221,13 +231,90 @@
           setInterval(sync, 300);
         }
 
+        // ---- Models downloaded on demand ----
+        // complete.data only holds the shaders and the default model (Giraffe). Each other model is a separate package
+        // (model_<name>.js + model_<name>.data, made by file_packager): downloaded when the model is chosen
+        // (load_model calls Module.webRequestModel, then is called again once the files are there), or in the
+        // background once the demo runs, smallest first (not with the data saver of the browser).
+        const modelPackages = { Spot: 'spot', Snail: 'snail', Train: 'train', Dragon: 'dragon', Clown: 'clown', Cthulhu: 'cthulhu' };
+        const packageLoads = {};  // model -> promise, resolved when its files are in the file system
+        const packageDone = {};   // package -> resolve function
+        let requestedModel = null;  // model chosen, waiting for its package
+        const modelLoading = document.getElementById('model-loading');
+
+        function loadPackage(name) {
+          const pkg = modelPackages[name];
+          if (!pkg) return Promise.resolve();
+          if (!packageLoads[name]) {
+            packageLoads[name] = new Promise((resolve, reject) => {
+              packageDone[pkg] = resolve;
+              const script = document.createElement('script');
+              script.src = 'model_' + pkg + '.js';
+              script.onerror = () => { delete packageLoads[name]; reject(new Error('model_' + pkg)); };
+              document.body.appendChild(script);
+            });
+          }
+          return packageLoads[name];
+        }
+        const packageReady = name => !modelPackages[name] || packageDone[modelPackages[name]] === null;
+
+        function requestModel(name) {
+          if (packageReady(name)) return 1;
+          requestedModel = name;
+          modelLoading.textContent = 'Loading ' + name + '…';
+          modelLoading.hidden = false;
+          loadPackage(name).then(() => {
+            if (requestedModel !== name) return;  // another model was chosen meanwhile
+            requestedModel = null;
+            modelLoading.hidden = true;
+            Module.ccall('web_load_model', null, ['string'], [name]);
+          }, () => {
+            if (requestedModel === name) { requestedModel = null; modelLoading.textContent = 'Could not download the model ' + name + '.'; setTimeout(() => (modelLoading.hidden = true), 4000); }
+          });
+          return 0;
+        }
+
+        // Progress of the model being downloaded (the packages report it through Module.setStatus)
+        function showModelProgress() {
+          if (!requestedModel || !Module.dataFileDownloads) return;
+          const key = Object.keys(Module.dataFileDownloads).find(k => k.includes('model_' + modelPackages[requestedModel] + '.data'));
+          const d = key && Module.dataFileDownloads[key];
+          if (d && d.total) modelLoading.textContent = 'Loading ' + requestedModel + '… ' + Math.min(100, Math.round(100 * d.loaded / d.total)) + '%';
+        }
+
+        function watchPackages() {
+          // A package has written its files when it removes its run dependency 'datafile_model_<name>.data'
+          const remove = Module.removeRunDependency;
+          Module.removeRunDependency = function (id) {
+            remove(id);
+            const m = /model_(\w+)\.data/.exec(id);
+            if (m && id.startsWith('datafile_') && packageDone[m[1]]) { packageDone[m[1]](); packageDone[m[1]] = null; }
+          };
+        }
+
+        async function prefetchModels() {
+          if (navigator.connection && navigator.connection.saveData) return;
+          for (const name of Object.keys(modelPackages)) {
+            // a model chosen by the visitor keeps all the bandwidth
+            while (requestedModel && requestedModel !== name) await new Promise(r => setTimeout(r, 500));
+            try { await loadPackage(name); } catch (e) { return; }
+          }
+        }
+
+
         var Module = {
             canvas: (function() {
                 var canvas = document.getElementById('canvas');
                 canvas.addEventListener("webglcontextlost", function(e) { alert('WebGL context lost. You will need to reload the page.'); e.preventDefault(); }, false);
                 return canvas;
             })(),
-            onRuntimeInitialized: function() { if (usePanel) initPanel(); },
+            webRequestModel: requestModel,
+            setStatus: function() { showModelProgress(); },  // progress of the model packages
+            onRuntimeInitialized: function() {
+                watchPackages();
+                if (usePanel) initPanel();
+                setTimeout(prefetchModels, 3000);  // once the default model is displayed
+            },
         };
         </script>
 
