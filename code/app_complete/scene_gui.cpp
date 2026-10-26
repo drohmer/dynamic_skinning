@@ -19,6 +19,17 @@ static bool toggle_button(char const* label, bool active)
 }
 
 
+// Names of the models, in the display order: models with a pre-designed animation first, then the other
+// legacy models
+std::vector<std::string> scene_structure::model_names() const
+{
+	std::vector<std::string> names = {"Cylinder", "Giraffe", "Clown", "Spot", "Snail", "Dragon", "Cthulhu", "Train"};
+	for (auto const& m : get_legacy_models())
+		if (std::find(names.begin(), names.end(), m.name) == names.end())
+			names.push_back(m.name);
+	return names;
+}
+
 // Main toolbar: interaction mode, model, animation and dynamic skinning
 void scene_structure::display_gui()
 {
@@ -47,13 +58,7 @@ void scene_structure::display_gui()
 	// ---- Model ----
 	ImGui::SetNextItemWidth(160 * project::gui_scale);
 	if (ImGui::BeginCombo("Model", current_model_name.c_str())) {
-		// Display order: models with a pre-designed animation first, then the other legacy models
-		std::vector<std::string> model_names = {"Cylinder", "Giraffe", "Clown", "Spot", "Snail", "Dragon", "Cthulhu", "Train"};
-		for (auto const& m : get_legacy_models())
-			if (std::find(model_names.begin(), model_names.end(), m.name) == model_names.end())
-				model_names.push_back(m.name);
-
-		for (auto const& model_name : model_names) {
+		for (auto const& model_name : model_names()) {
 			bool is_selected = (current_model_name == model_name);
 			if (ImGui::Selectable(model_name.c_str(), is_selected)) {
 				if (current_model_name != model_name)

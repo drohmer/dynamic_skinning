@@ -10,12 +10,14 @@ static EM_BOOL touch_callback(int event_type, EmscriptenTouchEvent const* event,
     touch_gesture_state& state = *static_cast<touch_gesture_state*>(user_data);
     bool const is_end = (event_type == EMSCRIPTEN_EVENT_TOUCHEND || event_type == EMSCRIPTEN_EVENT_TOUCHCANCEL);
 
-    // Fingers still on the screen (the ones lifted by a touchend are flagged as changed)
+    // Fingers still on the canvas (the ones lifted by a touchend are flagged as changed). The fingers on other
+    // elements of the page are ignored: a finger held on the "Hold to compare" button of the touch panel must
+    // not turn the drag of another finger into a two-finger gesture.
     int N_down = 0;
     float x[2] = {0, 0}, y[2] = {0, 0};
     for (int k = 0; k < event->numTouches; ++k) {
         EmscriptenTouchPoint const& t = event->touches[k];
-        if (is_end && t.isChanged)
+        if (!t.onTarget || (is_end && t.isChanged))
             continue;
         if (N_down < 2) {
             x[N_down] = float(t.targetX);

@@ -241,8 +241,9 @@ void animation_loop()
 
 
 	// Display the ImGUI interface: main toolbar, and the advanced settings in a separate window
-	scene.display_gui();
-	if (scene.show_settings) {
+	if (scene.show_gui)
+		scene.display_gui();
+	if (scene.show_gui && scene.show_settings) {
 		ImGui::SetNextWindowPos(ImVec2(10, 130 * project::gui_scale), ImGuiCond_FirstUseEver);
 		ImGui::Begin("Settings", &scene.show_settings, ImGuiWindowFlags_AlwaysAutoResize);
 		display_gui_default();

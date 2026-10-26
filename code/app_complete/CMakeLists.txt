@@ -117,6 +117,7 @@ if(EMSCRIPTEN)
     set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".html")
     target_link_options(${PROJECT_NAME} PRIVATE
         -sMAX_WEBGL_VERSION=2 -sUSE_GLFW=3 -sALLOW_MEMORY_GROWTH=1
+        -sEXPORTED_RUNTIME_METHODS=ccall  # functions of web_interface.cpp, called by the HTML panel
         "SHELL:--preload-file ${ROOT}/shaders/@shaders/"
     )
     file(GLOB ASSETS_FILES "${ROOT}/assets/*")

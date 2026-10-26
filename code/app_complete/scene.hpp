@@ -144,6 +144,7 @@ struct scene_structure : cgp::scene_inputs_generic {
 	// GUI
 	// ****************************** //
 	bool show_settings = false;      // advanced settings window (hidden by default)
+	bool show_gui = true;            // ImGui windows (hidden on touch screens, which use the HTML panel of the web page)
 	bool animation_running = false;  // state of the Play/Pause button
 
 	// ****************************** //
@@ -170,6 +171,7 @@ struct scene_structure : cgp::scene_inputs_generic {
 	// Zoom: multiply the camera distance to its center by factor
 	void zoom_camera(float factor);
 	void reset_pose();  // cancel the joint edits: back to the pose of the model when loaded, animation at t=0
+	std::vector<std::string> model_names() const;  // models of the Model list, in display order
 	// Load a model by name
 	void load_model(std::string const& name);
 
