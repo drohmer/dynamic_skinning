@@ -280,7 +280,7 @@ void scene_structure::initialize()
 	sphere_picking.model.scaling = 0.03f;
 	sphere_picking.material.color = {0, 1, 0};
 
-	load_model("Cylinder");
+	load_model("Giraffe");  // default model: the global oscillation of the teaser of the paper
 	ds_timer.start();
 
 	// Pinch zoom on touch screens (web version only)

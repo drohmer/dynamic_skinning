@@ -72,7 +72,7 @@ struct scene_structure : cgp::scene_inputs_generic {
 	// Character
 	// ****************************** //
 	character_structure character;
-	std::string current_model_name = "Cylinder";
+	std::string current_model_name = "Giraffe";
 
 	// Cthulhu-specific options
 	int cthulhu_resolution_index = 0;  // index into cthulhu_resolutions[]

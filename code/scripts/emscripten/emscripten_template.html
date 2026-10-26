@@ -43,8 +43,9 @@
               #panel:not(.open) .more { display: none; }
             }
             @media not (orientation: portrait) { #panel .grip { display: none; } }
-            #panel .grip { align-self: center; width: 64px; height: 22px; border: 0; background: none; padding: 8px 0; margin: -4px 0 -6px; }
-            #panel .grip::before { content: ""; display: block; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .3); }
+            #panel .grip { align-self: center; min-height: 32px; border: 0; background: none; font-size: 13px; font-weight: 500;
+              color: var(--soft); padding: 0 16px; }
+            #panel .grip::before { content: ""; display: block; width: 48px; height: 5px; margin: 0 auto 4px; border-radius: 3px; background: rgba(255, 255, 255, .3); }
             #panel .row { display: flex; gap: 8px; align-items: center; }
             #panel select, #panel button {
               font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); min-height: 44px;
@@ -86,7 +87,7 @@
         <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
 
         <aside id="panel" hidden aria-label="Demo controls">
-          <button class="grip" type="button" id="p-grip" aria-label="Show or hide the parameters" aria-expanded="false"></button>
+          <button class="grip" type="button" id="p-grip" aria-expanded="false">Show parameters</button>
           <div class="row">
             <select id="p-model" aria-label="Model"></select>
             <button type="button" id="p-play">Play</button>
@@ -170,8 +171,22 @@
             sliders.appendChild(label);
           }
 
+          // Portrait: the parameters are shown by default on a tablet, folded on a phone (small screen)
           const grip = document.getElementById('p-grip');
-          grip.addEventListener('click', () => { const open = panel.classList.toggle('open'); grip.setAttribute('aria-expanded', open); });
+          const setOpen = open => {
+            panel.classList.toggle('open', open);
+            grip.setAttribute('aria-expanded', open);
+            grip.textContent = open ? 'Hide parameters' : 'Show parameters';
+          };
+          grip.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
+          setOpen(Math.min(screen.width, screen.height) >= 600);
+
+          // Portrait: the canvas ends above the panel, whose height changes when it is unfolded
+          const portrait = matchMedia('(orientation: portrait)');
+          const fitCanvas = () => document.body.style.setProperty('--panel-h', portrait.matches ? panel.offsetHeight + 'px' : '0px');
+          new ResizeObserver(fitCanvas).observe(panel);
+          portrait.addEventListener('change', fitCanvas);
+          fitCanvas();
 
           const advanced = document.getElementById('p-advanced');
           advanced.addEventListener('click', () => { num('web_set_show_gui', num('web_show_gui') ? 0 : 1); sync(); });
