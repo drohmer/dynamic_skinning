@@ -55,7 +55,7 @@ Cost of an update (Python and numpy in float32, on the development Mac, without 
 - **`examples/`**: the example files.
 - **`assets/spot/`**: the model of Spot (copied from `code/assets/spot/` of the applications). The add-on is self-contained: neither the extension, nor the examples, nor the tools use the rest of the repository.
 - **`tools/`**: generation of the examples (`make_examples.py`), with the construction of the rigged cylinder (`make_cylinder.py`) and a small importer of the asset format of the applications (`make_spot.py`: `mesh.obj`, `skeleton_*`, `rig_joint`, `rig_weights`, `texture.png`), reusable for other models.
-- **`listing/`**: page of the extension on the Blender Extensions Platform: description (`description.md`), icon (256x256), featured image and comparison (1920x1080). The images are rendered from `examples/spot.blend` with the installed extension (`render_spot.py`, Workbench), then composed by `compose.py` (Pillow, NumPy).
+- **`listing/`**: page of the extension on the Blender Extensions Platform: description (`description.md`), icon (256x256), featured image and comparison (1920x1080), preview video (`preview.mp4`, side by side without and with dynamic skinning). The images are rendered from `examples/spot.blend` with the installed extension (`render_spot.py` and `render_video.py`, Workbench), then composed by `compose.py` and `compose_video.py` (Pillow, NumPy, ffmpeg).
 - **`tests/test_cylinder.py`**: non-regression test without interface. The bone of the cylinder rotates by 90° in 0.7 s; the test prints the maximal offset at a few instants and saves Workbench renders:
 
 ```bash
