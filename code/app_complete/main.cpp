@@ -87,6 +87,8 @@ int main(int, char* argv[])
 		// Skinning on the CPU by default: faster than the vertex shader on mobile GPUs (see scene.hpp)
 		scene.gpu_skinning_default = false;
 		scene.use_gpu_skinning = false;
+		// Gestures without mode: a finger on a joint rotates it, elsewhere it orbits the camera (see scene.hpp)
+		scene.touch_interaction = true;
 	}
 	// The canvas is in device pixels (see animation_loop): the GUI is scaled by the same pixel ratio, and its font
 	// is rasterized at its final size, so that the text is sharp instead of an enlarged bitmap

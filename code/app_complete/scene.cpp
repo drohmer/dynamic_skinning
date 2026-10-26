@@ -182,6 +182,8 @@ void scene_structure::reinitialize_after_model_change()
 
 	// Rest local matrices (used for joints that have no animation channel)
 	skeleton_local_rest = character.animated_model.skeleton.joint_matrix_local;
+	animation_initial = character.animated_model.animation;
+	skeleton_local_rest_initial = skeleton_local_rest;
 
 	// Reset picking state and weight color cache
 	picking = joint_picking_state();
@@ -523,6 +525,19 @@ void scene_structure::mouse_move_event()
 		return;
 	}
 
+	// Touch screen: the finger drags the joint picked when it touched the screen, or orbits the camera
+	if (touch_interaction) {
+		picking.joint_hover = -1;
+		if (picking.is_selected)
+			joint_picking_mouse_move(picking, character.animated_model.skeleton, interactive_deformation,
+				inputs.mouse.position.current,
+				camera_control.camera_model, camera_projection,
+				camera_control.camera_model.matrix_view());
+		else if (touch_orbit && inputs.mouse.click.left)
+			camera_control.camera_model.manipulator_rotate_arcball(p0, p1);
+		return;
+	}
+
 	// Bone-edit mode:
 	// Shift + left click → camera rotation (arcball)
 	if (inputs.mouse.click.left && inputs.keyboard.shift && !on_gui) {
@@ -574,6 +589,31 @@ void scene_structure::mouse_click_event()
 	if (inputs.mouse.on_gui && (click_left || click_right))
 		return;
 
+	// Touch screen: a finger on a joint (within 18 GUI units: about 30 points on a tablet) drags it, elsewhere it
+	// orbits the camera
+	if (touch_interaction) {
+		if (click_left) {
+			int const joint = pick_skeleton_joint_screen(skeleton, inputs.mouse.position.current,
+				camera_control.camera_model, camera_projection,
+				{float(window.width), float(window.height)}, 18.0f * project::gui_scale);
+			if (joint != -1) {
+				joint_picking_select(picking, skeleton, joint);
+				picking.click_button = picking_click_button::left;
+			}
+			else
+				touch_orbit = true;
+		}
+		if (release) {
+			if (picking.is_selected)
+				joint_picking_apply_deformation(picking, skeleton, interactive_deformation,
+					character.animated_model.animation, skeleton_local_rest);
+			picking.is_selected = false;
+			picking.click_button = picking_click_button::none;
+			touch_orbit = false;
+		}
+		return;
+	}
+
 	if (release && picking.is_selected) {
 		joint_picking_apply_deformation(picking, skeleton, interactive_deformation,
 			character.animated_model.animation, skeleton_local_rest);
@@ -598,6 +638,24 @@ void scene_structure::zoom_camera(float factor)
 {
 	auto& cam = camera_control.camera_model;
 	cam.distance_to_center = std::max(0.05f, std::min(50.0f, cam.distance_to_center * factor));
+}
+
+void scene_structure::reset_pose()
+{
+	// The joint edits are stored in the animations and in the rest local matrices (joint_picking_apply_deformation)
+	character.animated_model.animation = animation_initial;
+	skeleton_local_rest = skeleton_local_rest_initial;
+	for (auto& M : interactive_deformation)
+		M = mat4::build_identity();
+	picking.is_selected = false;
+	picking.click_button = picking_click_button::none;
+	flap_frequency = 0.0f;  // Dragon: "Flight" rebuilt at the next frame for the current frequency
+
+	// Animation paused at its start (the jump to this pose triggers the oscillations, like a release)
+	animation_running = false;
+	character.timer.stop();
+	character.timer.t = 0.0f;
+	character.timer.t_periodic = 0.0f;
 }
 
 void scene_structure::keyboard_event()
@@ -630,4 +688,13 @@ void scene_structure::idle_frame()
 	float const pinch = touch_gestures_consume_zoom(touch);
 	if (pinch != 1.0f)
 		zoom_camera(pinch);
+
+	// Two-finger translation: the center of rotation moves in the plane of the screen, so that the model
+	// follows the fingers (at the depth of the center: a relative unit is d tan(fov/2) in height)
+	vec2 const pan = touch_gestures_consume_pan(touch);
+	if (pan.x != 0.0f || pan.y != 0.0f) {
+		auto& cam = camera_control.camera_model;
+		float const s = cam.distance_to_center * std::tan(camera_projection.field_of_view / 2.0f);
+		cam.manipulator_translate_in_plane(-s * vec2{camera_projection.aspect_ratio * pan.x, pan.y});
+	}
 }

@@ -26,18 +26,21 @@ void scene_structure::display_gui()
 	ImGui::Begin("Dynamic Skinning", NULL, ImGuiWindowFlags_AlwaysAutoResize);
 
 	// ---- Interaction mode ----
+	// (touch screens: no tooltips, which would stay displayed after a tap, nor keyboard shortcut)
 	if (toggle_button("Bone edit", !camera_mode))
 		camera_mode = false;
-	if (ImGui::IsItemHovered())
+	if (!touch_interaction && ImGui::IsItemHovered())
 		ImGui::SetTooltip("Left drag on a joint: rotation\nRight drag on a joint: twist\nScroll / pinch: zoom");
 	ImGui::SameLine();
 	if (toggle_button("Camera", camera_mode))
 		camera_mode = true;
-	if (ImGui::IsItemHovered())
+	if (!touch_interaction && ImGui::IsItemHovered())
 		ImGui::SetTooltip("Left drag: rotation\nRight drag / scroll / pinch: zoom\nCtrl + left drag: translation");
 	ImGui::SameLine();
-	ImGui::TextDisabled("(Tab)");
-	ImGui::SameLine();
+	if (!touch_interaction) {
+		ImGui::TextDisabled("(Tab)");
+		ImGui::SameLine();
+	}
 	if (toggle_button("Settings", show_settings))
 		show_settings = !show_settings;
 
@@ -67,6 +70,11 @@ void scene_structure::display_gui()
 		if (animation_running) character.timer.start();
 		else                   character.timer.stop();
 	}
+	ImGui::SameLine();
+	if (ImGui::Button("Reset"))
+		reset_pose();
+	if (!touch_interaction && ImGui::IsItemHovered())
+		ImGui::SetTooltip("Back to the rest pose: cancels the joint edits, animation at its start");
 	ImGui::SameLine();
 	// Quick toggle of the skeleton display (bones and joints)
 	bool show_skeleton = gui.display_skeleton_bones || gui.display_skeleton_joints;

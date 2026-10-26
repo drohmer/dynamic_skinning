@@ -27,9 +27,21 @@ static EM_BOOL touch_callback(int event_type, EmscriptenTouchEvent const* event,
     if (N_down >= 2) {
         state.multi_touch = true;
         float const d = std::sqrt((x[1] - x[0]) * (x[1] - x[0]) + (y[1] - y[0]) * (y[1] - y[0]));
-        if (state.pinch_distance > 0.0f && d > 1.0f)
+        float const cx = (x[0] + x[1]) / 2.0f, cy = (y[0] + y[1]) / 2.0f;
+        if (state.pinch_distance > 0.0f && d > 1.0f) {
             state.zoom_factor *= state.pinch_distance / d;  // fingers apart -> closer camera
+
+            // Motion of the middle of the fingers, in relative coordinates of the canvas
+            double w = 0, h = 0;
+            emscripten_get_element_css_size("#canvas", &w, &h);
+            if (w > 0 && h > 0) {
+                state.pan[0] += 2.0f * (cx - state.pinch_center[0]) / float(w);
+                state.pan[1] -= 2.0f * (cy - state.pinch_center[1]) / float(h);
+            }
+        }
         state.pinch_distance = d;
+        state.pinch_center[0] = cx;
+        state.pinch_center[1] = cy;
     }
     else {
         state.pinch_distance = 0.0f;
@@ -62,4 +74,12 @@ float touch_gestures_consume_zoom(touch_gesture_state& state)
     float const f = state.zoom_factor;
     state.zoom_factor = 1.0f;
     return f;
+}
+
+cgp::vec2 touch_gestures_consume_pan(touch_gesture_state& state)
+{
+    cgp::vec2 const p = {state.pan[0], state.pan[1]};
+    state.pan[0] = 0.0f;
+    state.pan[1] = 0.0f;
+    return p;
 }

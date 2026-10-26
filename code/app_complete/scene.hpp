@@ -90,6 +90,9 @@ struct scene_structure : cgp::scene_inputs_generic {
 	joint_picking_state picking;
 	cgp::numarray<cgp::mat4> interactive_deformation;
 	cgp::numarray<cgp::mat4> skeleton_local_rest;  // local matrices restored each frame before animation
+	// Animations and rest local matrices of the loaded model, before the joint edits (restored by reset_pose)
+	std::map<std::string, skeleton_animation_structure> animation_initial;
+	cgp::numarray<cgp::mat4> skeleton_local_rest_initial;
 	float flap_frequency = 0.0f;  // (Hz) wing beat frequency of the current dragon "Flight" animation
 	mesh_drawable sphere_picking;
 
@@ -104,6 +107,9 @@ struct scene_structure : cgp::scene_inputs_generic {
 	void draw_train_track();
 	bool camera_mode = false;  // false = bone-edit mode, true = camera mode
 	touch_gesture_state touch;  // pinch zoom on touch screens (web version)
+	// Touch screens: no mode to choose, a finger on a joint rotates it, elsewhere it orbits the camera
+	bool touch_interaction = false;
+	bool touch_orbit = false;  // the finger down started outside the joints: camera rotation
 	weight_display_mode weight_display = weight_display_mode::none;
 
 	// Cache for weight color visualization (avoid recomputing every frame)
@@ -163,6 +169,7 @@ struct scene_structure : cgp::scene_inputs_generic {
 	bool show_bend_weights() const;
 	// Zoom: multiply the camera distance to its center by factor
 	void zoom_camera(float factor);
+	void reset_pose();  // cancel the joint edits: back to the pose of the model when loaded, animation at t=0
 	// Load a model by name
 	void load_model(std::string const& name);
 

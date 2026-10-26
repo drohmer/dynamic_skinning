@@ -34,6 +34,18 @@ int pick_skeleton_joint(skeleton_structure const& skeleton,
                         cgp::camera_projection_perspective const& projection,
                         float sphere_radius = 0.08f);
 
+// Pick the skeleton joint closest to a screen position (relative coordinates in [-1,1]), within a distance in
+// pixels: used on touch screens, where a finger is less precise than the mouse cursor. Returns joint index or -1.
+int pick_skeleton_joint_screen(skeleton_structure const& skeleton,
+                               cgp::vec2 const& screen_position,
+                               cgp::camera_generic_base const& camera,
+                               cgp::camera_projection_perspective const& projection,
+                               cgp::vec2 const& window_size,
+                               float max_distance_pixels);
+
+// Select a joint: start of its drag.
+void joint_picking_select(joint_picking_state& picking, skeleton_structure const& skeleton, int joint);
+
 // Handle mouse click for joint picking (Shift must be held by caller).
 void joint_picking_mouse_click(joint_picking_state& picking,
                                skeleton_structure const& skeleton,

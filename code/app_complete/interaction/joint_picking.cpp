@@ -23,6 +23,52 @@ int pick_skeleton_joint(skeleton_structure const& skeleton,
 }
 
 
+int pick_skeleton_joint_screen(skeleton_structure const& skeleton,
+                               vec2 const& screen_position,
+                               camera_generic_base const& camera,
+                               camera_projection_perspective const& projection,
+                               vec2 const& window_size,
+                               float max_distance_pixels)
+{
+    mat4 const PV = projection.matrix() * camera.matrix_view();
+    int best = -1;
+    float best_distance = max_distance_pixels;
+    for (int k = 0; k < skeleton.size(); ++k) {
+        vec3 const p = skeleton.joint_matrix_global[k].get_block_translation();
+        vec4 const clip = PV * vec4(p.x, p.y, p.z, 1.0f);
+        if (clip.w <= 1e-6f)
+            continue;  // behind the camera
+        vec2 const q = {clip.x / clip.w, clip.y / clip.w};
+        // relative coordinates [-1,1] -> pixels
+        float const d = norm(vec2{(q.x - screen_position.x) * window_size.x, (q.y - screen_position.y) * window_size.y}) / 2.0f;
+        if (d < best_distance) {
+            best_distance = d;
+            best = k;
+        }
+    }
+    return best;
+}
+
+void joint_picking_select(joint_picking_state& picking, skeleton_structure const& skeleton, int joint)
+{
+    vec3 const picked_position = skeleton.joint_matrix_global[joint].get_block_translation();
+    picking.is_selected = true;
+    picking.selected_joint = joint;
+    picking.p_clicked = picked_position;
+    picking.p_current = picked_position;
+    picking.p_previous = picked_position;
+    picking.accumulated_rotation = {0, 0, 0, 1};  // identity
+    picking.accumulated_twist_angle = 0.0f;
+    picking.selected_joint_true = picking.selected_joint;
+
+    // For rotation mode: the actual deformed joint is the parent
+    if (joint != 0 && picking.deformation_is_rotation) {
+        picking.selected_joint_true = skeleton.parent_index[joint];
+    }
+
+    std::cout << "Picked joint: " << joint << " (" << skeleton.joint_name[joint] << ")" << std::endl;
+}
+
 void joint_picking_mouse_click(joint_picking_state& picking,
                                skeleton_structure const& skeleton,
                                vec2 const& screen_position,
@@ -40,25 +86,8 @@ void joint_picking_mouse_click(joint_picking_state& picking,
 
     if (mouse_click) {
         int joint_selected = pick_skeleton_joint(skeleton, screen_position, camera, projection);
-        if (joint_selected != -1) {
-            vec3 const picked_position = skeleton.joint_matrix_global[joint_selected].get_block_translation();
-            picking.is_selected = true;
-            picking.selected_joint = joint_selected;
-            picking.p_clicked = picked_position;
-            picking.p_current = picked_position;
-            picking.p_previous = picked_position;
-            picking.accumulated_rotation = {0, 0, 0, 1};  // identity
-            picking.accumulated_twist_angle = 0.0f;
-            picking.selected_joint_true = picking.selected_joint;
-
-            // For rotation mode: the actual deformed joint is the parent
-            if (joint_selected != 0 && picking.deformation_is_rotation) {
-                picking.selected_joint_true = skeleton.parent_index[joint_selected];
-            }
-
-            std::cout << "Picked joint: " << joint_selected
-                      << " (" << skeleton.joint_name[joint_selected] << ")" << std::endl;
-        }
+        if (joint_selected != -1)
+            joint_picking_select(picking, skeleton, joint_selected);
     }
 
     if (mouse_release) {
