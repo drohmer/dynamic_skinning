@@ -6,46 +6,209 @@
         <meta charset="utf-8">
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+        <title>Dynamic Skinning</title>
         <style>
+            :root { --bg: #14121c; --ink: #f5f3ff; --soft: #b7b2cc; --accent: #ff6a3d; }
             * {
+                box-sizing: border-box;
                 margin: 0;
                 padding: 0;
             }
+            html, body { height: 100%; overflow: hidden; background: #fff; font-family: system-ui, sans-serif; }
+            /* The size of the canvas on the page is set here (CSS): at each frame, the application sets its size
+               in pixels from it and devicePixelRatio (sharp image on high density screens) */
             #canvas {
-                background-color: black;
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh;
+                display: block; background-color: #fff; outline: none;
                 touch-action: none; /* touch gestures go to the application (no page scroll / zoom) */
             }
+
+            /* ---- Touch panel: replaces the ImGui toolbar on touch screens (controls sized for the fingers) ----
+               Landscape: column on the right, the canvas is narrowed. Portrait: bar at the bottom (model, play,
+               reset, compare), unfolded to show the parameters over the scene. ?panel=1 shows it with a mouse. */
+            :root { --panel-w: 0px; --panel-h: 0px; }
+            body.with-panel { --panel-w: 300px; }
+            @media (orientation: portrait) { body.with-panel { --panel-w: 0px; --panel-h: calc(128px + env(safe-area-inset-bottom)); } }
+            body.with-panel #canvas { width: calc(100vw - var(--panel-w)); height: calc(100dvh - var(--panel-h)); }
+            #panel {
+              position: fixed; z-index: 9; top: 0; right: 0; bottom: 0; width: 300px; overflow-y: auto;
+              background: var(--bg); color: var(--ink); padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
+              display: flex; flex-direction: column; gap: 12px; font-size: 15px;
+              -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation;
+            }
+            #panel[hidden] { display: none; }
+            @media (orientation: portrait) {
+              #panel { top: auto; left: 0; width: auto; max-height: 60dvh; border-radius: 18px 18px 0 0; padding-top: 10px;
+                       box-shadow: 0 -12px 30px rgba(0, 0, 0, .25); }
+              #panel:not(.open) .more { display: none; }
+            }
+            @media not (orientation: portrait) { #panel .grip { display: none; } }
+            #panel .grip { align-self: center; width: 64px; height: 22px; border: 0; background: none; padding: 8px 0; margin: -4px 0 -6px; }
+            #panel .grip::before { content: ""; display: block; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .3); }
+            #panel .row { display: flex; gap: 8px; align-items: center; }
+            #panel select, #panel button {
+              font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); min-height: 44px;
+              background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .18); border-radius: 12px; padding: 0 12px;
+            }
+            #panel select { flex: 1; min-width: 0; -webkit-appearance: none; appearance: none;
+              background-image: linear-gradient(45deg, transparent 50%, var(--soft) 50%), linear-gradient(-45deg, transparent 50%, var(--soft) 50%);
+              background-position: calc(100% - 18px) 50%, calc(100% - 12px) 50%; background-size: 6px 6px; background-repeat: no-repeat; padding-right: 30px; }
+            #panel select option { color: #000; }
+            #panel button:active { background: rgba(255, 255, 255, .22); }
+            #panel #p-play { min-width: 76px; }
+            #panel .compare { width: 100%; min-height: 52px; background: linear-gradient(90deg, rgba(169, 155, 255, .25), rgba(255, 106, 61, .25));
+              border-color: rgba(255, 106, 61, .5); }
+            #panel .compare.pressed { background: var(--accent); color: #fff; }
+            #panel .compare:disabled { opacity: .4; }
+            #panel .compare small { display: block; font-size: 12px; font-weight: 500; color: var(--soft); }
+            #panel .compare.pressed small { color: #fff; }
+            #panel .more { display: flex; flex-direction: column; gap: 12px; }
+            #panel .toggles { display: flex; flex-wrap: wrap; gap: 8px; }
+            #panel .toggle { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border-radius: 999px;
+              background: rgba(255, 255, 255, .08); font-size: 14px; font-weight: 500; }
+            #panel .toggle input { width: 20px; height: 20px; accent-color: var(--accent); }
+            #panel .slider { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; }
+            #panel .slider[hidden] { display: none; }
+            #panel .slider span { font-size: 14px; color: #ddd8f5; }
+            #panel .slider output { font-size: 14px; font-variant-numeric: tabular-nums; color: var(--soft); }
+            #panel .slider input { grid-column: 1 / -1; width: 100%; height: 36px; -webkit-appearance: none; appearance: none; background: none; }
+            #panel .slider input::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .2); }
+            #panel .slider input::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; margin-top: -11px;
+              border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .4); }
+            #panel .slider input::-moz-range-track { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .2); }
+            #panel .slider input::-moz-range-thumb { width: 28px; height: 28px; border: 0; border-radius: 50%; background: #fff; }
+            #panel .advanced { background: none; border-style: dashed; font-weight: 500; color: var(--soft); }
         </style>
     </head>
 
     <body>
 
-        <canvas id="canvas" width="600" height="600"  oncontextmenu="event.preventDefault()"></canvas>
+        <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
 
+        <aside id="panel" hidden aria-label="Demo controls">
+          <button class="grip" type="button" id="p-grip" aria-label="Show or hide the parameters" aria-expanded="false"></button>
+          <div class="row">
+            <select id="p-model" aria-label="Model"></select>
+            <button type="button" id="p-play">Play</button>
+            <button type="button" id="p-reset">Reset</button>
+          </div>
+          <button type="button" class="compare" id="p-compare">Hold to compare<small>standard skinning while pressed</small></button>
+          <div class="more">
+            <div class="toggles">
+              <label class="toggle"><input type="checkbox" id="p-ds"> Dynamic skinning</label>
+              <label class="toggle"><input type="checkbox" id="p-delay"> Delay</label>
+              <label class="toggle"><input type="checkbox" id="p-skeleton"> Skeleton</label>
+            </div>
+            <div id="p-sliders"></div>
+            <button type="button" class="advanced" id="p-advanced">Advanced settings</button>
+          </div>
+        </aside>
 
         <script type='text/javascript'>
+        // ---- Touch panel (touch screens, or ?panel=1 to try it with a mouse) ----
+        // It calls the functions of app_complete/web_interface.cpp, and reads their state regularly to follow the
+        // changes made elsewhere (model change, ImGui settings).
+        const usePanel = matchMedia('(pointer: coarse)').matches || new URLSearchParams(location.search).has('panel');
+        const panel = document.getElementById('panel');
+        const num = (name, ...args) => Module.ccall(name, 'number', args.map(() => 'number'), args);
+        // Parameters of the paper (index of web_interface.cpp), log: logarithmic slider as in ImGui
+        const params = [
+          { id: 0, name: 'Frequency', sym: 'f', min: 0, max: 5, unit: ' Hz', show: 'ds' },
+          { id: 1, name: 'Damping', sym: '&tau;', min: 0.05, max: 5, unit: ' s', log: true, show: 'ds' },
+          { id: 2, name: 'Amplitude', sym: 'A', min: 0, max: 5, unit: '', show: 'ds' },
+          { id: 3, name: 'Drag', sym: 'D', min: 0, max: 3, unit: '', show: 'ds' },
+          { id: 4, name: 'Delay speed', sym: 'c', min: 0.5, max: 10, unit: '', log: true, show: 'delay' },
+        ];
+        const toSlider = (p, v) => 1000 * (p.log ? Math.log(v / p.min) / Math.log(p.max / p.min) : (v - p.min) / (p.max - p.min));
+        const fromSlider = (p, s) => p.log ? p.min * Math.pow(p.max / p.min, s / 1000) : p.min + (p.max - p.min) * s / 1000;
+        let editing = null;  // control being moved by the finger: not overwritten by the synchronization
+
+        function initPanel() {
+          let names = '';
+          try { names = Module.ccall('web_model_names', 'string', [], []); } catch (e) {}
+          if (!names) { setTimeout(initPanel, 200); return; }  // scene not initialized yet
+
+          num('web_set_show_gui', 0);
+          document.body.classList.add('with-panel');
+          panel.hidden = false;
+
+          const model = document.getElementById('p-model');
+          for (const n of names.split(',')) model.add(new Option(n, n));
+          model.addEventListener('change', () => { Module.ccall('web_load_model', null, ['string'], [model.value]); sync(); });
+
+          document.getElementById('p-play').addEventListener('click', () => { num('web_set_playing', num('web_is_playing') ? 0 : 1); sync(); });
+          document.getElementById('p-reset').addEventListener('click', () => { num('web_reset'); sync(); });
+
+          // Hold to compare: standard skinning while the button is pressed
+          const compare = document.getElementById('p-compare');
+          let comparing = false;
+          const startCompare = e => { e.preventDefault(); if (comparing || !num('web_dynamic_skinning')) return; comparing = true; num('web_set_dynamic_skinning', 0); compare.classList.add('pressed'); };
+          const endCompare = () => { if (!comparing) return; comparing = false; num('web_set_dynamic_skinning', 1); compare.classList.remove('pressed'); };
+          compare.addEventListener('pointerdown', startCompare);
+          for (const t of ['pointerup', 'pointercancel', 'pointerleave']) compare.addEventListener(t, endCompare);
+          compare.addEventListener('contextmenu', e => e.preventDefault());
+
+          const toggle = (id, setter) => document.getElementById(id).addEventListener('change', e => { num(setter, e.target.checked ? 1 : 0); sync(); });
+          toggle('p-ds', 'web_set_dynamic_skinning');
+          toggle('p-delay', 'web_set_delay');
+          toggle('p-skeleton', 'web_set_skeleton');
+
+          const sliders = document.getElementById('p-sliders');
+          for (const p of params) {
+            const label = document.createElement('label');
+            label.className = 'slider';
+            label.innerHTML = `<span>${p.name} <em>${p.sym}</em></span><output></output><input type="range" min="0" max="1000" step="1">`;
+            const input = label.querySelector('input');
+            input.addEventListener('pointerdown', () => (editing = input));
+            input.addEventListener('change', () => (editing = null));
+            input.addEventListener('input', () => {
+              const v = fromSlider(p, +input.value);
+              num('web_set_parameter', p.id, v);
+              label.querySelector('output').textContent = v.toFixed(2) + p.unit;
+            });
+            p.label = label; p.input = input;
+            sliders.appendChild(label);
+          }
+
+          const grip = document.getElementById('p-grip');
+          grip.addEventListener('click', () => { const open = panel.classList.toggle('open'); grip.setAttribute('aria-expanded', open); });
+
+          const advanced = document.getElementById('p-advanced');
+          advanced.addEventListener('click', () => { num('web_set_show_gui', num('web_show_gui') ? 0 : 1); sync(); });
+
+          // Synchronization with the state of the application
+          function sync() {
+            if (document.activeElement !== model) model.value = Module.ccall('web_current_model', 'string', [], []);
+            document.getElementById('p-play').textContent = num('web_is_playing') ? 'Pause' : 'Play';
+            const ds = !!num('web_dynamic_skinning'), delay = !!num('web_delay');
+            if (!comparing) document.getElementById('p-ds').checked = ds;
+            document.getElementById('p-delay').checked = delay;
+            document.getElementById('p-skeleton').checked = !!num('web_skeleton');
+            compare.disabled = !ds && !comparing;
+            for (const p of params) {
+              p.label.hidden = p.show === 'ds' ? !(ds || comparing) : !delay;
+              if (editing === p.input) continue;
+              const v = num('web_parameter_value', p.id);
+              p.input.value = toSlider(p, v);
+              p.label.querySelector('output').textContent = v.toFixed(2) + p.unit;
+            }
+            advanced.textContent = num('web_show_gui') ? 'Hide advanced settings' : 'Advanced settings';
+          }
+          sync();
+          setInterval(sync, 300);
+        }
+
         var Module = {
             canvas: (function() {
                 var canvas = document.getElementById('canvas');
                 canvas.addEventListener("webglcontextlost", function(e) { alert('WebGL context lost. You will need to reload the page.'); e.preventDefault(); }, false);
                 return canvas;
             })(),
+            onRuntimeInitialized: function() { if (usePanel) initPanel(); },
         };
         </script>
 
         <script async type="text/javascript" src="complete.js"></script>
-
-        <script async type="text/javascript">
-            
-            resize();
-            window.addEventListener("resize", resize);
-            function resize()
-            {
-                canvas.width  = window.innerWidth-5;
-                canvas.height = window.innerHeight-5;
-            }
-
-        </script>
 
     </body>
 </html>
