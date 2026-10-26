@@ -8,7 +8,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
         <title>Dynamic Skinning</title>
         <style>
-            :root { --bg: #14121c; --ink: #f5f3ff; --soft: #b7b2cc; --accent: #ff6a3d; }
+            :root { --bar: 0px; --bg: #14121c; --ink: #f5f3ff; --soft: #b7b2cc; --accent: #ff6a3d; }
             * {
                 box-sizing: border-box;
                 margin: 0;
@@ -24,25 +24,29 @@
             }
 
             /* ---- Touch panel: replaces the ImGui toolbar on touch screens (controls sized for the fingers) ----
-               Landscape: column on the right, the canvas is narrowed. Portrait: bar at the bottom (model, play,
-               reset, compare), unfolded to show the parameters over the scene. ?panel=1 shows it with a mouse. */
+               Three levels (data-level): 1 = model, play, reset, compare; 2 = + options and parameters f, tau, A, D;
+               3 = level 1 + all the ImGui windows. Portrait: bar at the bottom, the canvas ends above it.
+               Landscape: card at the top right over the scene (levels 1, 3), column on the right (level 2). */
             :root { --panel-w: 0px; --panel-h: 0px; }
-            body.with-panel { --panel-w: 300px; }
-            @media (orientation: portrait) { body.with-panel { --panel-w: 0px; --panel-h: calc(128px + env(safe-area-inset-bottom)); } }
-            body.with-panel #canvas { width: calc(100vw - var(--panel-w)); height: calc(100dvh - var(--panel-h)); }
+            body.with-panel[data-level="2"] { --panel-w: 300px; }
+            @media (orientation: portrait) { body.with-panel[data-level] { --panel-w: 0px; } }
+            body.with-panel #canvas { width: calc(100vw - var(--panel-w)); height: calc(100dvh - var(--bar) - var(--panel-h)); }
             #panel {
-              position: fixed; z-index: 9; top: 0; right: 0; bottom: 0; width: 300px; overflow-y: auto;
-              background: var(--bg); color: var(--ink); padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
+              position: fixed; z-index: 9; top: calc(var(--bar) + 12px); right: 12px; width: 300px; overflow-y: auto;
+              max-height: calc(100dvh - var(--bar) - 24px); border-radius: 16px; box-shadow: 0 12px 30px rgba(0, 0, 0, .3);
+              background: var(--bg); color: var(--ink); padding: 10px 14px 14px;
               display: flex; flex-direction: column; gap: 12px; font-size: 15px;
               -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation;
             }
+            #panel[data-level="2"] { top: var(--bar); right: 0; bottom: 0; max-height: none; border-radius: 0; box-shadow: none;
+              padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
             #panel[hidden] { display: none; }
+            #panel:not([data-level="2"]) .more { display: none; }
             @media (orientation: portrait) {
-              #panel { top: auto; left: 0; width: auto; max-height: 60dvh; border-radius: 18px 18px 0 0; padding-top: 10px;
-                       box-shadow: 0 -12px 30px rgba(0, 0, 0, .25); }
-              #panel:not(.open) .more { display: none; }
+              #panel, #panel[data-level="2"] { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 60dvh;
+                border-radius: 18px 18px 0 0; box-shadow: 0 -12px 30px rgba(0, 0, 0, .25); padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
             }
-            @media not (orientation: portrait) { #panel .grip { display: none; } }
+            /* Button of the levels 1 <-> 2 (and back from 3), at the top of the panel */
             #panel .grip { align-self: center; min-height: 32px; border: 0; background: none; font-size: 13px; font-weight: 500;
               color: var(--soft); padding: 0 16px; }
             #panel .grip::before { content: ""; display: block; width: 48px; height: 5px; margin: 0 auto 4px; border-radius: 3px; background: rgba(255, 255, 255, .3); }
@@ -87,7 +91,7 @@
         <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
 
         <aside id="panel" hidden aria-label="Demo controls">
-          <button class="grip" type="button" id="p-grip" aria-expanded="false">Show parameters</button>
+          <button class="grip" type="button" id="p-grip" aria-expanded="false">Parameters</button>
           <div class="row">
             <select id="p-model" aria-label="Model"></select>
             <button type="button" id="p-play">Play</button>
@@ -101,14 +105,14 @@
               <label class="toggle"><input type="checkbox" id="p-skeleton"> Skeleton</label>
             </div>
             <div id="p-sliders"></div>
-            <button type="button" class="advanced" id="p-advanced">Advanced settings</button>
+            <button type="button" class="advanced" id="p-advanced">All settings</button>
           </div>
         </aside>
 
         <script type='text/javascript'>
         // ---- Touch panel (touch screens, or ?panel=1 to try it with a mouse) ----
-        // It calls the functions of app_complete/web_interface.cpp, and reads their state regularly to follow the
-        // changes made elsewhere (model change, ImGui settings).
+        // It calls the functions of app_complete/web_interface.cpp, and reads their state regularly to follow the changes made
+        // elsewhere (model change, ImGui settings).
         const usePanel = matchMedia('(pointer: coarse)').matches || new URLSearchParams(location.search).has('panel');
         const panel = document.getElementById('panel');
         const num = (name, ...args) => Module.ccall(name, 'number', args.map(() => 'number'), args);
@@ -171,25 +175,29 @@
             sliders.appendChild(label);
           }
 
-          // Portrait: the parameters are shown by default on a tablet, folded on a phone (small screen)
-          const grip = document.getElementById('p-grip');
-          const setOpen = open => {
-            panel.classList.toggle('open', open);
-            grip.setAttribute('aria-expanded', open);
-            grip.textContent = open ? 'Hide parameters' : 'Show parameters';
-          };
-          grip.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
-          setOpen(Math.min(screen.width, screen.height) >= 600);
-
-          // Portrait: the canvas ends above the panel, whose height changes when it is unfolded
+          // Portrait: the canvas ends above the panel, whose height changes with the level
           const portrait = matchMedia('(orientation: portrait)');
           const fitCanvas = () => document.body.style.setProperty('--panel-h', portrait.matches ? panel.offsetHeight + 'px' : '0px');
           new ResizeObserver(fitCanvas).observe(panel);
           portrait.addEventListener('change', fitCanvas);
-          fitCanvas();
 
-          const advanced = document.getElementById('p-advanced');
-          advanced.addEventListener('click', () => { num('web_set_show_gui', num('web_show_gui') ? 0 : 1); sync(); });
+          // Levels: 1 = basic controls (default), 2 = + parameters, 3 = basic controls + all the ImGui windows.
+          // The last level chosen is kept for the next visits (browser storage).
+          const grip = document.getElementById('p-grip');
+          const setLevel = level => {
+            panel.dataset.level = document.body.dataset.level = level;
+            num('web_set_show_gui', level === 3 ? 1 : 0);
+            if (level === 3) num('web_set_show_settings', 1);
+            grip.textContent = ['Parameters', 'Fewer controls', 'Close all settings'][level - 1];
+            grip.setAttribute('aria-expanded', level === 2);
+            try { localStorage.setItem('ds-panel-level', level); } catch (e) {}
+            fitCanvas();
+          };
+          grip.addEventListener('click', () => setLevel(+panel.dataset.level === 1 ? 2 : 1));
+          document.getElementById('p-advanced').addEventListener('click', () => setLevel(3));
+          let level = 1;
+          try { level = +localStorage.getItem('ds-panel-level') || 1; } catch (e) {}
+          setLevel(Math.min(Math.max(level, 1), 3));
 
           // Synchronization with the state of the application
           function sync() {
@@ -207,8 +215,8 @@
               p.input.value = toSlider(p, v);
               p.label.querySelector('output').textContent = v.toFixed(2) + p.unit;
             }
-            advanced.textContent = num('web_show_gui') ? 'Hide advanced settings' : 'Advanced settings';
           }
+          window.panelSync = sync;
           sync();
           setInterval(sync, 300);
         }

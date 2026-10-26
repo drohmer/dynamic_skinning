@@ -93,6 +93,8 @@ EMSCRIPTEN_KEEPALIVE void web_set_parameter(int parameter, float value)
 // ImGui windows: hidden when the HTML panel is used, shown again by its "Advanced" button
 EMSCRIPTEN_KEEPALIVE int web_show_gui() { return scene.show_gui ? 1 : 0; }
 EMSCRIPTEN_KEEPALIVE void web_set_show_gui(int visible) { scene.show_gui = (visible != 0); }
+// Settings window of ImGui (all the parameters): opened with the toolbar by the "All settings" button
+EMSCRIPTEN_KEEPALIVE void web_set_show_settings(int visible) { scene.show_settings = (visible != 0); }
 
 }
 
