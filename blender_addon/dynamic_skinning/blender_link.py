@@ -6,7 +6,6 @@
 import time
 import bpy
 import numpy as np
-from mathutils import Matrix
 
 from . import core
 
