@@ -41,8 +41,6 @@ void gpu_skinning_initialize(gpu_skinning_state& state,
     // Clean up previous state if re-initializing
     if (state.initialized) {
         if (state.skinning_matrices_tex.id)  glDeleteTextures(1, &state.skinning_matrices_tex.id);
-        if (state.joint_global_tex.id)       glDeleteTextures(1, &state.joint_global_tex.id);
-        if (state.filtered_velocity_tex.id)  glDeleteTextures(1, &state.filtered_velocity_tex.id);
         if (state.hier_weights_tex.id)       glDeleteTextures(1, &state.hier_weights_tex.id);
         if (state.history_tex.id)            glDeleteTextures(1, &state.history_tex.id);
         if (state.dlbs_joint_tex.id)         glDeleteTextures(1, &state.dlbs_joint_tex.id);
@@ -54,6 +52,13 @@ void gpu_skinning_initialize(gpu_skinning_state& state,
 
     state.N_joints = model.skeleton.size();
     state.N_vertex = rigged_mesh.mesh_bind_pose.position.size();
+    if (state.N_joints > gpu_skinning_state::MAX_JOINTS) {
+        std::cerr << "GPU skinning: " << state.N_joints << " joints, the shader is limited to "
+                  << gpu_skinning_state::MAX_JOINTS << " (MAX_JOINTS in gpu_skinning.hpp and skinning.vert.glsl)" << std::endl;
+        return;
+    }
+    state.joint_velocity_data.assign(4 * state.N_joints, 0.0f);
+    state.joint_center_data.assign(4 * state.N_joints, 0.0f);
 
     // ---- 1. Compile shader ----
     state.skinning_shader.load(project::path + "shaders/skinning/skinning.vert.glsl",
@@ -61,8 +66,6 @@ void gpu_skinning_initialize(gpu_skinning_state& state,
 
     // ---- 2. Create dynamic textures (updated per frame) ----
     create_rgba32f_texture_2d(state.skinning_matrices_tex, 4, state.N_joints);
-    create_rgba32f_texture_2d(state.joint_global_tex, 4, state.N_joints);
-    create_rgba32f_texture_2d(state.filtered_velocity_tex, 1, state.N_joints);  // 1 x N_joints
     create_rgba32f_texture_2d(state.history_tex, 4 * delayed_lbs_state::N_history, state.N_joints);
 
     // Static data of the delayed LBS per joint: texel (col, j) = column col of B_j^-1, texel (4, j) = (parent, d_j)
@@ -214,40 +217,22 @@ void gpu_skinning_update(gpu_skinning_state& state,
         glBindTexture(GL_TEXTURE_2D, 0);
     }
 
-    // ---- 2. Upload joint_global_tex ----
-    {
-        std::vector<float> global_data(4 * state.N_joints * 4, 0.0f);
-        for (int j = 0; j < state.N_joints; ++j) {
-            mat4 const& M = model.skeleton.joint_matrix_global[j];
-            int base = j * 4 * 4;
-            for (int col = 0; col < 4; ++col)
-                for (int row = 0; row < 4; ++row)
-                    global_data[base + col * 4 + row] = M(row, col);
-        }
-
-        glBindTexture(GL_TEXTURE_2D, state.joint_global_tex.id);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 4, state.N_joints,
-                        GL_RGBA, GL_FLOAT, global_data.data());
-        glBindTexture(GL_TEXTURE_2D, 0);
-    }
-
-    // ---- 3. Compute filtered angular velocity per joint on CPU ----
+    // ---- 2. Compute filtered angular velocity per joint on CPU ----
     compute_filtered_angular_velocities(
         state.joint_trackers, state.filtered_velocity,
         model.skeleton, params, time);
 
-    // Upload to filtered_velocity_tex (1 x N_joints)
-    {
-        std::vector<float> filtered_data(state.N_joints * 4, 0.0f);
-        for (int j = 0; j < state.N_joints; ++j) {
-            filtered_data[j * 4 + 0] = state.filtered_velocity[j].x;
-            filtered_data[j * 4 + 1] = state.filtered_velocity[j].y;
-            filtered_data[j * 4 + 2] = state.filtered_velocity[j].z;
+    // ---- 3. Per-joint data of the bend deformer (uniform arrays, sent in gpu_skinning_draw) ----
+    for (int j = 0; j < state.N_joints; ++j) {
+        vec3 const& omega = state.filtered_velocity[j];
+        float const n = norm(omega);
+        vec3 const axis = n > 0.0f ? omega / n : vec3{0, 0, 0};
+        mat4 const& M = model.skeleton.joint_matrix_global[j];
+        for (int c = 0; c < 3; ++c) {
+            state.joint_velocity_data[4 * j + c] = axis[c];
+            state.joint_center_data[4 * j + c] = M(c, 3);
         }
-        glBindTexture(GL_TEXTURE_2D, state.filtered_velocity_tex.id);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1, state.N_joints,
-                        GL_RGBA, GL_FLOAT, filtered_data.data());
-        glBindTexture(GL_TEXTURE_2D, 0);
+        state.joint_velocity_data[4 * j + 3] = n;
     }
 
     // ---- 4. Upload the history of local joint matrices (delayed LBS) ----
@@ -293,8 +278,6 @@ void gpu_skinning_draw(gpu_skinning_state& state,
 
     drawable.supplementary_texture.clear();
     drawable.supplementary_texture["skinning_matrices_tex"]  = state.skinning_matrices_tex;
-    drawable.supplementary_texture["joint_global_tex"]       = state.joint_global_tex;
-    drawable.supplementary_texture["filtered_velocity_tex"]  = state.filtered_velocity_tex;
     drawable.supplementary_texture["hier_weights_tex"]       = state.hier_weights_tex;
     drawable.supplementary_texture["history_tex"]            = state.history_tex;
     drawable.supplementary_texture["dlbs_joint_tex"]         = state.dlbs_joint_tex;
@@ -311,6 +294,8 @@ void gpu_skinning_draw(gpu_skinning_state& state,
     opengl_uniform(state.skinning_shader, "dlbs_head", dlbs_state.head);
     opengl_uniform(state.skinning_shader, "dlbs_N", delayed_lbs_state::N_history);
     opengl_uniform(state.skinning_shader, "dlbs_steps_per_distance", delayed_lbs_steps_per_distance(params));
+    glUniform4fv(state.skinning_shader.query_uniform_location("joint_velocity"), state.N_joints, state.joint_velocity_data.data());
+    glUniform4fv(state.skinning_shader.query_uniform_location("joint_center"), state.N_joints, state.joint_center_data.data());
 
     draw(drawable, env);
 

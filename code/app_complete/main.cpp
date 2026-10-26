@@ -42,6 +42,18 @@ void display_gui_default();
 
 timer_fps fps_record;
 
+// Scale at which the GUI font is rasterized (1: default font, enlarged by FontGlobalScale)
+float gui_font_scale = 1.0f;
+
+#ifdef __EMSCRIPTEN__
+// Number of device pixels per CSS pixel used for the canvas: devicePixelRatio (2 on Retina, tablets, 3 on
+// phones), limited to 2 to keep the frame rate on mobile GPUs
+float web_pixel_ratio()
+{
+	return float(EM_ASM_DOUBLE({ return Math.min(window.devicePixelRatio || 1, 2); }));
+}
+#endif
+
 int main(int, char* argv[])
 {
 	std::cout << "Run " << argv[0] << std::endl;
@@ -71,8 +83,20 @@ int main(int, char* argv[])
 	if (EM_ASM_INT({ return navigator.maxTouchPoints > 0 ? 1 : 0; })) {
 		float const screen_size = float(EM_ASM_DOUBLE({ return Math.min(window.innerWidth, window.innerHeight); }));
 		project::gui_scale = std::clamp(screen_size / 320.0f, 1.0f, 1.6f);
-		ImGui::GetStyle().ScaleAllSizes(project::gui_scale);
 		ImGui::GetIO().ConfigWindowsMoveFromTitleBarOnly = true;  // no accidental move of the windows
+		// Skinning on the CPU by default: faster than the vertex shader on mobile GPUs (see scene.hpp)
+		scene.gpu_skinning_default = false;
+		scene.use_gpu_skinning = false;
+	}
+	// The canvas is in device pixels (see animation_loop): the GUI is scaled by the same pixel ratio, and its font
+	// is rasterized at its final size, so that the text is sharp instead of an enlarged bitmap
+	project::gui_scale *= web_pixel_ratio();
+	ImGui::GetStyle().ScaleAllSizes(project::gui_scale);
+	{
+		ImFontConfig font_config;
+		font_config.SizePixels = std::round(13.0f * project::gui_scale);
+		ImGui::GetIO().Fonts->AddFontDefault(&font_config);
+		gui_font_scale = project::gui_scale;
 	}
 #endif
 
@@ -166,9 +190,28 @@ int main(int, char* argv[])
 void animation_loop()
 {
 
+#ifdef __EMSCRIPTEN__
+	// The canvas follows its size on the page (set by the CSS), in device pixels: sharp image on high density
+	// screens. Resizing it through GLFW keeps the mouse/touch coordinates in the same pixels as the canvas.
+	{
+		float const ratio = web_pixel_ratio();
+		int const width = int(std::round(ratio * EM_ASM_INT({ return document.getElementById('canvas').clientWidth; })));
+		int const height = int(std::round(ratio * EM_ASM_INT({ return document.getElementById('canvas').clientHeight; })));
+		int current_width = 0, current_height = 0;
+		glfwGetWindowSize(scene.window.glfw_window, &current_width, &current_height);
+		if (width > 0 && height > 0 && (width != current_width || height != current_height))
+			glfwSetWindowSize(scene.window.glfw_window, width, height);
+	}
+#endif
 	emscripten_update_window_size(scene.window.width, scene.window.height); // update window size in case of use of emscripten (not used by default)
 
-	scene.camera_projection.aspect_ratio = scene.window.aspect_ratio();
+	// Portrait window (phone, tablet): the vertical field of view is widened, so that the horizontal one stays
+	// the one of a square window and the character is not cut on the sides
+	static float const field_of_view_reference = scene.camera_projection.field_of_view;
+	float const aspect_ratio = scene.window.aspect_ratio();
+	scene.camera_projection.field_of_view = aspect_ratio >= 1.0f ? field_of_view_reference :
+		2.0f * std::atan(std::tan(field_of_view_reference / 2.0f) / aspect_ratio);
+	scene.camera_projection.aspect_ratio = aspect_ratio;
 	scene.environment.camera_projection = scene.camera_projection.matrix();
 	glViewport(0, 0, scene.window.width, scene.window.height);
 
@@ -188,7 +231,7 @@ void animation_loop()
 #endif
 
 	imgui_create_frame();
-	ImGui::GetIO().FontGlobalScale = project::gui_scale;
+	ImGui::GetIO().FontGlobalScale = project::gui_scale / gui_font_scale;
 	scene.inputs.mouse.on_gui = ImGui::GetIO().WantCaptureMouse;
 	scene.inputs.time_interval = time_interval;
 
@@ -196,7 +239,7 @@ void animation_loop()
 	// Display the ImGUI interface: main toolbar, and the advanced settings in a separate window
 	scene.display_gui();
 	if (scene.show_settings) {
-		ImGui::SetNextWindowPos(ImVec2(10, 130), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowPos(ImVec2(10, 130 * project::gui_scale), ImGuiCond_FirstUseEver);
 		ImGui::Begin("Settings", &scene.show_settings, ImGuiWindowFlags_AlwaysAutoResize);
 		display_gui_default();
 		scene.display_gui_settings();

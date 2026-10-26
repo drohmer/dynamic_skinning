@@ -145,9 +145,9 @@ void scene_structure::load_model(std::string const& name)
 	}
 
 	// GPU skinning is enabled by default and the choice is kept between models,
-	// except for Cthulhu (high resolution meshes) where it is always enabled
+	// except for Cthulhu (high resolution meshes) where the default path is always set
 	if (name == "Cthulhu")
-		use_gpu_skinning = true;
+		use_gpu_skinning = gpu_skinning_default;
 
 	// Amplitude A and drag D: default values, smaller for Cthulhu (large wings and long tentacles),
 	// larger drag for the Clown with local centers (only the extremities are deformed)
@@ -168,6 +168,7 @@ void scene_structure::load_model(std::string const& name)
 
 void scene_structure::reinitialize_after_model_change()
 {
+	vbo_has_bind_pose = false;  // new drawables
 	// Initialize dynamic skinning on the first mesh
 	std::string first_mesh = character.animated_model.rigged_mesh.begin()->first;
 	dynamic_skinning_initialize(ds_state, character.animated_model, first_mesh);
@@ -345,9 +346,13 @@ void scene_structure::display_frame()
 		auto& rigged_mesh = character.animated_model.rigged_mesh[first_mesh];
 		mesh_drawable& drawable = character.drawable[first_mesh];
 
-		// Ensure VBO contains bind-pose data (GPU shader applies LBS itself)
-		drawable.vbo_position.update(rigged_mesh.mesh_bind_pose.position);
-		drawable.vbo_normal.update(rigged_mesh.mesh_bind_pose.normal);
+		// Ensure VBO contains bind-pose data (GPU shader applies LBS itself): uploaded only after a model change or
+		// the CPU path, not at each frame (about 6 MB per frame for Cthulhu)
+		if (!vbo_has_bind_pose) {
+			drawable.vbo_position.update(rigged_mesh.mesh_bind_pose.position);
+			drawable.vbo_normal.update(rigged_mesh.mesh_bind_pose.normal);
+			vbo_has_bind_pose = true;
+		}
 
 		gpu_skinning_update(gpu_state, character.animated_model, first_mesh, ds_params, dlbs_state, ds_timer.t);
 		timing_gpu_upload.push(gpu_state.timing_upload_ms);
@@ -409,6 +414,7 @@ void scene_structure::display_frame()
 			mesh_drawable& drawable = character.drawable[mesh_name];
 			drawable.vbo_position.update(rigged_mesh.mesh_deformed.position);
 			drawable.vbo_normal.update(rigged_mesh.mesh_deformed.normal);
+			vbo_has_bind_pose = false;
 
 			// Encode bend weights as color: white (w=0) → red (w=1)
 			if (show_bend_weights() && ds_state.weight_bend.size() > 0) {

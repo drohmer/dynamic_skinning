@@ -34,9 +34,7 @@ uniform mat4 projection;
 
 // Skinning data textures
 uniform sampler2D skinning_matrices_tex;   // 4 x N_joints, each row = one mat4 (T_j)
-uniform sampler2D joint_global_tex;        // 4 x N_joints, each row = one mat4 (joint_matrix_global[j])
-uniform sampler2D filtered_velocity_tex;   // 1 x N_joints, pre-filtered angular velocity per joint
-uniform sampler2D hier_weights_tex;        // tiled 2D: (hier_max * hier_tile_w) x ceil(N_vertex / hier_tile_w)
+uniform sampler2D hier_weights_tex;       // tiled 2D: (hier_max * hier_tile_w) x ceil(N_vertex / hier_tile_w)
 uniform sampler2D history_tex;             // (4 N_history) x N_joints: past local joint matrices (delayed LBS)
 uniform sampler2D dlbs_joint_tex;          // 5 x N_joints: B_j^-1, then (parent, d_j) (delayed LBS)
 
@@ -46,6 +44,12 @@ uniform int hier_max;
 uniform int hier_tile_w;    // tiling: vertices per row in hier_weights_tex
 uniform float bend_factor;
 uniform int display_bend_weights;  // if 1, encode γ^bend as white→soft red color
+
+// Per-joint data of the bend deformer, read by every vertex for each of its joints: uniform arrays rather
+// than textures, to avoid two dependent texture reads per joint and per vertex (twice as fast on mobile GPUs)
+const int MAX_JOINTS = 128;  // = gpu_skinning_state::MAX_JOINTS
+uniform vec4 joint_velocity[MAX_JOINTS];  // pre-filtered angular velocity: unit axis (xyz) and norm (w)
+uniform vec4 joint_center[MAX_JOINTS];    // position of the joint in the current pose (xyz)
 
 // Delayed LBS uniforms
 uniform int dlbs_active;
@@ -92,10 +96,6 @@ mat4 get_delayed_skinning_mat4(int j, float d) {
     return G * get_mat4(dlbs_joint_tex, j);
 }
 
-vec3 get_translation(sampler2D tex, int row) {
-    return texelFetch(tex, ivec2(3, row), 0).xyz;
-}
-
 
 void main()
 {
@@ -138,15 +138,14 @@ void main()
             float beta = hw.y;
             if (beta < 1e-6) break;  // sentinel: end of list
 
-            // Read pre-filtered angular velocity (computed on CPU)
-            vec3 filtered = texelFetch(filtered_velocity_tex, ivec2(0, j), 0).xyz;
-
-            float on = length(filtered);
+            // Pre-filtered angular velocity (computed on CPU): unit axis and norm
+            vec4 velocity = joint_velocity[j];
+            float on = velocity.w;
             if (on < 0.01) continue;
-            vec3 od = filtered / on;
+            vec3 od = velocity.xyz;
 
             // --- Bend deformer (Rodrigues formula) ---
-            vec3 pj = get_translation(joint_global_tex, int(hw.w));  // rotation center: q_j, or a flexible origin
+            vec3 pj = joint_center[int(hw.w)].xyz;  // rotation center: q_j, or a flexible origin
             vec3 u = p_skinned - pj;
 
             // v = component of u perpendicular to rotation axis

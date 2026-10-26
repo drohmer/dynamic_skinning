@@ -42,7 +42,7 @@ void scene_structure::display_gui()
 		show_settings = !show_settings;
 
 	// ---- Model ----
-	ImGui::SetNextItemWidth(160);
+	ImGui::SetNextItemWidth(160 * project::gui_scale);
 	if (ImGui::BeginCombo("Model", current_model_name.c_str())) {
 		// Display order: models with a pre-designed animation first, then the other legacy models
 		std::vector<std::string> model_names = {"Cylinder", "Giraffe", "Clown", "Spot", "Snail", "Dragon", "Cthulhu", "Train"};
@@ -62,7 +62,7 @@ void scene_structure::display_gui()
 	}
 
 	// ---- Animation and skeleton display ----
-	if (ImGui::Button(animation_running ? "Pause" : "Play", ImVec2(60, 0))) {
+	if (ImGui::Button(animation_running ? "Pause" : "Play", ImVec2(60 * project::gui_scale, 0))) {
 		animation_running = !animation_running;
 		if (animation_running) character.timer.start();
 		else                   character.timer.stop();
@@ -105,23 +105,23 @@ void scene_structure::display_gui()
 	if (ds_params.active) {
 		// Frequency f (Hz), stored as the angular frequency omega = 2 pi f
 		float f = ds_params.frequency / (2 * Pi);
-		ImGui::SetNextItemWidth(160);
+		ImGui::SetNextItemWidth(160 * project::gui_scale);
 		if (ImGui::SliderFloat("Frequency f", &f, 0.0f, 5.0f, "%.2f Hz"))
 			ds_params.frequency = 2 * Pi * f;
 
 		// Damping tau (s), stored as the attenuation 1/tau
 		float tau = 1.0f / std::max(ds_params.attenuation, 0.01f);
-		ImGui::SetNextItemWidth(160);
+		ImGui::SetNextItemWidth(160 * project::gui_scale);
 		if (ImGui::SliderFloat("Damping tau", &tau, 0.05f, 5.0f, "%.2f s", ImGuiSliderFlags_Logarithmic))
 			ds_params.attenuation = 1.0f / tau;
 
-		ImGui::SetNextItemWidth(160);
+		ImGui::SetNextItemWidth(160 * project::gui_scale);
 		ImGui::SliderFloat("Amplitude A", &ds_params.amplitude, 0.0f, 5.0f, "%.2f");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Oscillations (driven by the changes of velocity)");
 
 		// Drag D: weight of the velocity skinning term, independent of the oscillations
-		ImGui::SetNextItemWidth(160);
+		ImGui::SetNextItemWidth(160 * project::gui_scale);
 		ImGui::SliderFloat("Drag D", &ds_params.drag, 0.0f, 3.0f, "%.2f");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Lag during the motion (proportional to the velocity)");
@@ -129,7 +129,7 @@ void scene_structure::display_gui()
 
 	// Propagation speed c of the delayed LBS
 	if (ds_params.delay_active) {
-		ImGui::SetNextItemWidth(160);
+		ImGui::SetNextItemWidth(160 * project::gui_scale);
 		ImGui::SliderFloat("Delay speed c", &ds_params.delay_speed, 0.5f, 10.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Propagation speed (model units per second, the model fits in [-1, 1])");

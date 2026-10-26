@@ -118,6 +118,10 @@ struct scene_structure : cgp::scene_inputs_generic {
 	// ****************************** //
 	gpu_skinning_state gpu_state;
 	bool use_gpu_skinning = true;
+	// Default skinning path, also imposed when Cthulhu is loaded. False on touch screens (web version): on mobile
+	// GPUs, the vertex shader is the bottleneck and the CPU path is faster (iPad Air M1, Cthulhu: 27 vs 18 fps)
+	bool gpu_skinning_default = true;
+	bool vbo_has_bind_pose = false;  // the VBO holds the bind pose expected by the GPU path (not a CPU-deformed mesh)
 
 	// ****************************** //
 	// Timing
