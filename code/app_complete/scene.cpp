@@ -542,18 +542,23 @@ void scene_structure::mouse_move_event()
 				inputs.mouse.position.current,
 				camera_control.camera_model, camera_projection,
 				camera_control.camera_model.matrix_view());
-		else if (touch_orbit && inputs.mouse.click.left)
+		else if (camera_drag == camera_drag_mode::rotation && inputs.mouse.click.left)
 			camera_control.camera_model.manipulator_rotate_arcball(p0, p1);
 		return;
 	}
 
 	// Bone-edit mode:
-	// Shift + left click → camera rotation (arcball)
-	if (inputs.mouse.click.left && inputs.keyboard.shift && !on_gui) {
+	// Left drag started outside the joints, or Shift + left drag → camera rotation (arcball)
+	if (inputs.mouse.click.left && !on_gui && (camera_drag == camera_drag_mode::rotation || inputs.keyboard.shift)) {
 		picking.joint_hover = -1;
 		camera_control.camera_model.manipulator_rotate_arcball(p0, p1);
 	}
-	// Shift + right click → zoom
+	// Right drag started outside the joints → camera translation
+	else if (inputs.mouse.click.right && !on_gui && camera_drag == camera_drag_mode::translation) {
+		picking.joint_hover = -1;
+		camera_control.camera_model.manipulator_translate_in_plane(p0 - p1);
+	}
+	// Shift + right drag → zoom
 	else if (inputs.mouse.click.right && inputs.keyboard.shift && !on_gui) {
 		picking.joint_hover = -1;
 		camera_control.camera_model.manipulator_scale_distance_to_center((p1 - p0).y);
@@ -581,6 +586,15 @@ void scene_structure::mouse_move_event()
 
 void scene_structure::mouse_click_event()
 {
+	bool click_left  = (inputs.mouse.click.last_action == last_mouse_cursor_action::click_left);
+	bool click_right = (inputs.mouse.click.last_action == last_mouse_cursor_action::click_right);
+	bool release     = (inputs.mouse.click.last_action == last_mouse_cursor_action::release_left) ||
+	                   (inputs.mouse.click.last_action == last_mouse_cursor_action::release_right);
+
+	// A new click or a release ends the camera drag started outside the joints
+	if (click_left || click_right || release)
+		camera_drag = camera_drag_mode::none;
+
 	if (camera_mode || inputs.keyboard.shift) {
 		// Camera mode or Shift → no picking
 		return;
@@ -588,11 +602,6 @@ void scene_structure::mouse_click_event()
 
 	// Bone-edit mode: left click = rotation, right click = twist
 	auto& skeleton = character.animated_model.skeleton;
-
-	bool click_left  = (inputs.mouse.click.last_action == last_mouse_cursor_action::click_left);
-	bool click_right = (inputs.mouse.click.last_action == last_mouse_cursor_action::click_right);
-	bool release     = (inputs.mouse.click.last_action == last_mouse_cursor_action::release_left) ||
-	                   (inputs.mouse.click.last_action == last_mouse_cursor_action::release_right);
 
 	// Click on the GUI → no picking (the release is still handled, to end a drag)
 	if (inputs.mouse.on_gui && (click_left || click_right))
@@ -610,7 +619,7 @@ void scene_structure::mouse_click_event()
 				picking.click_button = picking_click_button::left;
 			}
 			else
-				touch_orbit = true;
+				camera_drag = camera_drag_mode::rotation;
 		}
 		if (release) {
 			if (picking.is_selected)
@@ -618,8 +627,16 @@ void scene_structure::mouse_click_event()
 					character.animated_model.animation, skeleton_local_rest);
 			picking.is_selected = false;
 			picking.click_button = picking_click_button::none;
-			touch_orbit = false;
 		}
+		return;
+	}
+
+	// Mouse: a click outside the joints moves the camera, as with a finger
+	// (left button: rotation, right button: translation)
+	if ((click_left || click_right) &&
+		pick_skeleton_joint(skeleton, inputs.mouse.position.current, camera_control.camera_model, camera_projection) == -1) {
+		camera_drag = click_left ? camera_drag_mode::rotation : camera_drag_mode::translation;
+		picking.joint_hover = -1;
 		return;
 	}
 
