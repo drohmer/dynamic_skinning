@@ -41,7 +41,7 @@ void scene_structure::display_gui()
 	if (toggle_button("Bone edit", !camera_mode))
 		camera_mode = false;
 	if (!touch_interaction && ImGui::IsItemHovered())
-		ImGui::SetTooltip("Left drag on a joint: rotation\nRight drag on a joint: twist\nScroll / pinch: zoom");
+		ImGui::SetTooltip("Left drag on a joint: rotation\nRight drag on a joint: twist\nLeft drag elsewhere: camera rotation\nRight drag elsewhere: camera translation\nScroll / pinch: zoom");
 	ImGui::SameLine();
 	if (toggle_button("Camera", camera_mode))
 		camera_mode = true;

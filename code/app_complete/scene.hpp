@@ -109,7 +109,10 @@ struct scene_structure : cgp::scene_inputs_generic {
 	touch_gesture_state touch;  // pinch zoom on touch screens (web version)
 	// Touch screens: no mode to choose, a finger on a joint rotates it, elsewhere it orbits the camera
 	bool touch_interaction = false;
-	bool touch_orbit = false;  // the finger down started outside the joints: camera rotation
+	// Bone-edit mode: a drag started outside the joints moves the camera
+	// (touch or left button: rotation, right button: translation)
+	enum class camera_drag_mode { none, rotation, translation };
+	camera_drag_mode camera_drag = camera_drag_mode::none;
 	weight_display_mode weight_display = weight_display_mode::none;
 
 	// Cache for weight color visualization (avoid recomputing every frame)
