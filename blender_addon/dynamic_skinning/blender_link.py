@@ -196,7 +196,8 @@ def disable(obj):
 
 def parameters(obj):
     s = obj.dynamic_skinning
-    return core.Parameters(f=s.frequency, tau=s.damping, A=s.amplitude, D=s.drag, bend=s.bend)
+    A = s.amplitude if s.oscillation == 'ON' else 0.0   # oscillation off (velocity skinning): drag only
+    return core.Parameters(f=s.frequency, tau=s.damping, A=A, D=s.drag, bend=s.bend)
 
 
 def update_all(current_time):

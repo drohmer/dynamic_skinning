@@ -143,8 +143,10 @@ class DynamicSkinning:
                          whose local rotation is already in world coordinates: identity)
         """
         h = self.history
-        delta = h[:, -1:-N_CONVOLUTION - 1:-1] - h[:, -2:-N_CONVOLUTION - 2:-1]   # Ω(t - kΔt) - Ω(t - (k+1)Δt)
-        F_local = params.D * h[:, -1] + np.einsum('k,jkc->jc', oscillating_kernel(params), delta)
+        F_local = params.D * h[:, -1]
+        if params.A != 0:   # A = 0: velocity skinning (drag only), no convolution
+            delta = h[:, -1:-N_CONVOLUTION - 1:-1] - h[:, -2:-N_CONVOLUTION - 2:-1]   # Ω(t - kΔt) - Ω(t - (k+1)Δt)
+            F_local = F_local + np.einsum('k,jkc->jc', oscillating_kernel(params), delta)
         return np.einsum('jab,jb->ja', parent_rotation, F_local)
 
     def deformation(self, params, F, joint_position, p_lbs):

@@ -7,6 +7,7 @@ The effect is driven only by the velocity of the bones. There is no simulation t
 - **One click**: select a mesh deformed by an Armature modifier and click *Enable*.
 - **Interactive**: the mesh reacts while you rotate a bone in Pose Mode, and during the playback of the animation.
 - **Intuitive parameters**, editable while the mesh moves: frequency, damping and amplitude of the oscillations, drag during the motion, and overall bend strength.
+- **Oscillation on/off**: one click switches between dynamic skinning (drag and oscillations) and velocity skinning (drag only), keeping the settings.
 - **Per-vertex control**: paint an optional `DS_bend` vertex group to choose which parts are soft.
 - **Non-destructive**: the effect is a Geometry Nodes modifier added after the Armature modifier; *Disable* removes it.
 - **Self-contained**: pure Python and NumPy (shipped with Blender), no internet access, no file access.

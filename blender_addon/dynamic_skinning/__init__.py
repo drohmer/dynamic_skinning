@@ -10,6 +10,11 @@ from . import blender_link
 
 class DynamicSkinningSettings(bpy.types.PropertyGroup):
     enabled: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
+    # Oscillation off = velocity skinning (drag only); on = dynamic skinning (drag and oscillations).
+    # The settings of the oscillations are kept
+    oscillation: bpy.props.EnumProperty(name="Oscillation", default='ON', items=[
+        ('OFF', "Oscillation off", "Velocity skinning: drag only, without oscillations"),
+        ('ON', "Oscillation on", "Dynamic skinning: drag and oscillations")])
     # Oscillation kernel κ(t) = A exp(-t/τ) sin(2π f t)
     frequency: bpy.props.FloatProperty(name="Frequency f (Hz)", default=1.5, min=0.0, soft_max=5.0, subtype='NONE',
                                        description="Frequency of the oscillations (Hz)")
@@ -95,10 +100,13 @@ def draw_settings(layout, context):
     row = layout.row()
     row.operator(DS_OT_disable.bl_idname)
     row.operator(DS_OT_reset.bl_idname)
+    layout.row().prop(settings, "oscillation", expand=True)
     column = layout.column()
-    column.prop(settings, "frequency")
-    column.prop(settings, "damping")
-    column.prop(settings, "amplitude")
+    oscillations = column.column()
+    oscillations.active = settings.oscillation == 'ON'
+    oscillations.prop(settings, "frequency")
+    oscillations.prop(settings, "damping")
+    oscillations.prop(settings, "amplitude")
     column.prop(settings, "drag")
     column.prop(settings, "bend")
 
