@@ -7,6 +7,8 @@ imgui.ini
 **/.DS_Store
 # Build outputs
 build_emscripten/
+build_em_brew/
+/code/build_em_brew.log
 /code/complete
 /code/minimal
 /code/complete.html

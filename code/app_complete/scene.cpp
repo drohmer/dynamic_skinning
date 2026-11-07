@@ -163,6 +163,8 @@ void scene_structure::load_model(std::string const& name)
 	dynamic_skinning_parameters const ds_default;
 	ds_params.amplitude = (name == "Cthulhu") ? 0.47f : ds_default.amplitude;
 	ds_params.drag      = (name == "Cthulhu") ? 0.30f : ds_default.drag;
+	// Smaller joint spheres on Cthulhu: they hid the details of its surface
+	picking_sphere_size = (name == "Cthulhu") ? 0.012f : 0.03f;
 	if (name == "Clown" && clown_flexible_origins)
 		ds_params.drag = 1.0f;
 
@@ -477,6 +479,8 @@ void scene_structure::display_frame()
 		character.sk_drawable.display_segments = gui.display_skeleton_bones;
 		draw(character.sk_drawable, environment);
 	}
+
+	sphere_picking.model.scaling = picking_sphere_size;
 
 	// Flexible origins (yellow spheres)
 	if (ds_params.active) {

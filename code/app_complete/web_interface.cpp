@@ -90,6 +90,19 @@ EMSCRIPTEN_KEEPALIVE void web_set_parameter(int parameter, float value)
 	}
 }
 
+// Cthulhu: per-vertex bend weights (floppy wing membranes and tentacles), as the Settings checkbox
+// (the model is reloaded), and their coloring
+EMSCRIPTEN_KEEPALIVE int web_bend_weights() { return scene.cthulhu_use_bend_weights ? 1 : 0; }
+EMSCRIPTEN_KEEPALIVE void web_set_bend_weights(int active)
+{
+	if (scene.cthulhu_use_bend_weights == (active != 0)) return;
+	scene.cthulhu_use_bend_weights = (active != 0);
+	if (!scene.cthulhu_use_bend_weights) scene.display_bend_weights = false;
+	if (scene.current_model_name == "Cthulhu") scene.load_model("Cthulhu");
+}
+EMSCRIPTEN_KEEPALIVE int web_display_bend_weights() { return scene.display_bend_weights ? 1 : 0; }
+EMSCRIPTEN_KEEPALIVE void web_set_display_bend_weights(int visible) { scene.display_bend_weights = (visible != 0); }
+
 // ImGui windows: hidden when the HTML panel is used, shown again by its "Advanced" button
 EMSCRIPTEN_KEEPALIVE int web_show_gui() { return scene.show_gui ? 1 : 0; }
 EMSCRIPTEN_KEEPALIVE void web_set_show_gui(int visible) { scene.show_gui = (visible != 0); }

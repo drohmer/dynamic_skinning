@@ -95,6 +95,7 @@ struct scene_structure : cgp::scene_inputs_generic {
 	cgp::numarray<cgp::mat4> skeleton_local_rest_initial;
 	float flap_frequency = 0.0f;  // (Hz) wing beat frequency of the current dragon "Flight" animation
 	mesh_drawable sphere_picking;
+	float picking_sphere_size = 0.03f;  // radius of the joint spheres (smaller on the detailed Cthulhu)
 
 	// Train: track (rails, bars, pillars) scrolling backward, so that the train seems to move forward
 	struct track_part {
