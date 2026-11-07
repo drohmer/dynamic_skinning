@@ -1,6 +1,6 @@
 # Dynamic Skinning
 
-[![Build](https://github.com/drohmer/dynamic_skinning/actions/workflows/build.yml/badge.svg)](https://github.com/drohmer/dynamic_skinning/actions/workflows/build.yml)
+[![Build](https://github.com/drohmer/dynamic_skinning/actions/workflows/build.yml/badge.svg)](https://github.com/drohmer/dynamic_skinning/actions/workflows/build.yml) [![](https://www.replicabilitystamp.org/logo/Reproducibility-small.png)](http://www.replicabilitystamp.org#https-github-com-drohmer-dynamic-skinning)
 
 Implementation of the paper:
 
@@ -44,9 +44,9 @@ Dynamic skinning adds real-time, cartoon-like secondary deformations (lag, oscil
 
 ## Build
 
-Dependencies: a C++17 compiler, CMake (3.16 or later), OpenGL 3.3 and GLFW.
+Dependencies: a C++17 compiler, CMake (3.16 or later), pkg-config (macOS and Linux), OpenGL 3.3 and GLFW.
 
-- **macOS:** `brew install cmake glfw`
+- **macOS:** `brew install cmake pkg-config glfw`
 - **Linux (Debian, Ubuntu):** `sudo apt install cmake pkg-config libglfw3-dev`
 - **Windows:** Visual Studio, with CMake. GLFW is provided in `cgp/third_party/`.
 
