@@ -6,7 +6,7 @@ Implementation of the paper:
 
 > **Dynamic Skinning: Kinematics-Driven Cartoon Effects for Articulated Characters**<br>
 > Damien Rohmer, Karim Salem, Niranjan Kalyanasundaram, Victor Zordan<br>
-> *IEEE Transactions on Visualization and Computer Graphics*, 2026. DOI: [10.1109/TVCG.2026.3653317](https://doi.org/10.1109/TVCG.2026.3653317)<br>
+> *IEEE Transactions on Visualization and Computer Graphics*, 2026. DOI: [10.1109/TVCG.2026.3653317](https://doi.org/10.1109/TVCG.2026.3653317) &middot; arXiv: [2610.40976](https://arxiv.org/abs/2610.40976)<br>
 > Author's version: [`paper/Dynamic_Skinning_TVCG2026_author_version.pdf`](paper/Dynamic_Skinning_TVCG2026_author_version.pdf)<br>
 > Project page: [velocityskinning.com](https://velocityskinning.com/)
 
